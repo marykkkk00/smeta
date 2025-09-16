@@ -1,0 +1,125 @@
+/* --- Общие настройки --- */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #e0f7fa;
+  padding: 20px;
+  color: #004d40;
+}
+
+h1, h5 {
+  color: #006064;
+}
+
+/* --- Карточки --- */
+.card {
+  border-radius: 12px;
+  border: 2px solid #00acc1;
+  background-color: #b2ebf2;
+  margin-bottom: 20px;
+}
+
+.card-header {
+  border-radius: 10px 10px 0 0;
+  font-weight: bold;
+  background-color: #00acc1 !important; /* перекрываем bg-primary/bg-success/bg-info */
+  color: #e0f7fa !important;           /* белый текст */
+}
+
+/* --- Чат --- */
+.chat-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 2px solid #00acc1;
+  border-radius: 12px;
+  padding: 12px;
+  background: #b2ebf2;
+}
+
+.user-message {
+  background-color: #4dd0e1;
+  color: #004d40;
+  padding: 10px;
+  border-radius: 15px;
+  margin: 6px 0;
+  text-align: right;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+}
+
+.bot-message {
+  background-color: #80deea;
+  color: #004d40;
+  padding: 10px;
+  border-radius: 15px;
+  margin: 6px 0;
+  text-align: left;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+}
+
+/* --- Таблица --- */
+.table-responsive {
+  max-height: 500px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 2px solid #00acc1;
+}
+
+table {
+  background-color: #e0f2f1;
+}
+
+thead th {
+  background-color: #00acc1 !important; /* чтобы Bootstrap не перекрывал */
+  color: #e0f7fa !important;
+}
+
+tfoot tr {
+  background-color: #4dd0e1 !important;
+  font-weight: bold;
+  color: #004d40 !important;
+}
+
+/* --- Кнопки --- */
+button.btn-primary {
+  background-color: #0097a7 !important;
+  border-color: #00838f !important;
+}
+
+button.btn-primary:hover {
+  background-color: #00acc1 !important;
+  border-color: #0097a7 !important;
+}
+
+button.btn-success {
+  background-color: #26c6da !important;
+  border-color: #00bcd4 !important;
+}
+
+button.btn-success:hover {
+  background-color: #00acc1 !important;
+  border-color: #0097a7 !important;
+}
+
+/* --- Поля ввода --- */
+input, .form-control {
+  border-radius: 10px;
+  border: 1px solid #00acc1;
+  padding: 6px 10px;
+}
+
+/* --- Спиннеры --- */
+.spinner-border {
+  color: #004d40;
+}
+
+/* --- Мелкие улучшения --- */
+.text-end {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-white {
+  color: #e0f7fa !important;
+}

@@ -1,0 +1,29 @@
+# === Работа с файлами (Excel, PDF, сканы) ===
+pandas
+numpy
+openpyxl
+pdfplumber
+pytesseract
+pillow
+
+# === NLP (тексты, описания работ, материалов) ===
+spacy
+nltk
+transformers
+
+# === Машинное обучение (основа) ===
+scikit-learn
+xgboost
+lightgbm
+catboost
+
+# === Оптимизация и прогнозирование ===
+pulp
+ortools
+statsmodels
+
+# === Интерфейсы и API ===
+fastapi
+uvicorn
+streamlit
+gradio

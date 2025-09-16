@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Russian ChatBot</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .chat-container { border: 1px solid #ccc; border-radius: 10px; padding: 20px; height: 500px; overflow-y: auto; margin-bottom: 20px; }
+        .user { background-color: #e3f2fd; padding: 10px; border-radius: 10px; margin: 5px 0; text-align: right; }
+        .bot { background-color: #f5f5f5; padding: 10px; border-radius: 10px; margin: 5px 0; }
+        .input-area { display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🤖 Русский Чат-Бот</h1>
+    <div id="chat" class="chat-container"></div>
+    <div class="input-area">
+        <input type="text" id="message" placeholder="Введите сообщение..." onkeypress="if(event.key=='Enter') sendMessage()">
+        <button onclick="sendMessage()">Отправить</button>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat');
+        const messageInput = document.getElementById('message');
+        let chatHistory = [];
+
+        function addMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = role;
+            div.innerHTML = `<strong>${role === 'user' ? '👤 Вы' : '🤖 Бот'}:</strong> ${text}`;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            messageInput.disabled = true;
+            addMessage('user', message);
+            messageInput.value = '';
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: message,
+                        history: chatHistory
+                    })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    addMessage('bot', data.response);
+                    chatHistory.push([message, data.response]);
+                } else {
+                    addMessage('bot', 'Ошибка: ' + data.detail);
+                }
+            } catch (error) {
+                addMessage('bot', 'Ошибка соединения');
+            }
+
+            messageInput.disabled = false;
+            messageInput.focus();
+        }
+    </script>
+</body>
+</html>
