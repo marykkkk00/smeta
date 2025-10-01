@@ -1,0 +1,4314 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>GPT Chat</title>
+    <link rel="stylesheet" href="gpt.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+/* ===== CSS VARIABLES ===== */
+:root {
+    --primary-color: #000000;
+    --secondary-color: #ffffff;
+    --accent-color: #000000;
+    --text-color: #000000;
+    --light-text: #444444;
+    --background: #ffffff;
+    --card-bg: #F6F8F7;
+    --border-color: #dae5e1;
+    --hover-color: #e8efec;
+    --active-color: #d1ddd8;
+}
+
+/* ===== RESET & BASE STYLES ===== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "New Century Schoolbook", "TeX Gyre Schola", serif;
+    background-color: var(--background);
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* ===== LAYOUT & CONTAINERS ===== */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+}
+
+.container {
+    display: flex;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+    gap: 20px;
+}
+
+.main-content {
+    flex: 3;
+    min-width: 0;
+}
+
+.sidebar {
+    flex: 1;
+    min-width: 300px;
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    padding: 20px;
+    height: fit-content;
+    position: sticky;
+    top: 90px;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+}
+
+/* ===== HEADER ===== */
+header {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    padding: 10px 20px;
+    text-align: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    height: 50px;
+}
+
+/* ===== CHAT INTERFACE ===== */
+#chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 1rem;
+    padding-top: 60px;
+    box-sizing: border-box;
+}
+
+#messages {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-y: auto;
+    background-color: var(--card-bg);
+    margin-bottom: 0.5rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.message {
+    margin-bottom: 0.5rem;
+    padding: 0.8rem;
+    border-radius: 8px;
+}
+
+.user {
+    background-color: var(--hover-color);
+    font-weight: bold;
+    color: #000;
+}
+
+.gpt {
+    background-color: var(--card-bg);
+    color: #000;
+    font-weight: bold;
+    border: 1px solid var(--border-color);
+}
+
+.error {
+    background-color: #ffe0e0;
+    color: #d32f2f;
+    font-style: italic;
+}
+
+.loading {
+    font-style: italic;
+    color: #444;
+}
+
+/* ===== INPUT & CONTROLS ===== */
+#chat-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+#input {
+    width: 100%;
+    min-height: 50px;
+    max-height: 200px;
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: none;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background-color: var(--card-bg);
+}
+
+.buttons-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* ===== BUTTON STYLES ===== */
+button.send-btn,
+button.clear-btn,
+.excel-btn,
+.reload-btn,
+.smeta-btn,
+.stores-main-btn,
+.downloadBtn,
+.copy-table-btn,
+.open-excel-modal,
+.prices-btn,
+.btn-black {
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border: 2px solid var(--accent-color);
+    border-radius: 5px;
+    padding: 0.6rem 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+    font-family: inherit;
+}
+
+button.send-btn:hover,
+button.clear-btn:hover,
+.excel-btn:hover,
+.reload-btn:hover,
+.smeta-btn:hover,
+.stores-main-btn:hover,
+.downloadBtn:hover,
+.copy-table-btn:hover,
+.open-excel-modal:hover,
+.prices-btn:hover,
+.btn-black:hover {
+    background-color: #d2cccc;
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.2);
+}
+
+/* Special button variants */
+.download-btn {
+    font-family: inherit;
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border: 2px solid var(--border-color);
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+    margin-top: 10px;
+}
+
+.copy-btn {
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #2196f3;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: bold;
+}
+
+.copy-btn:hover {
+    background: #bbdefb;
+    transform: translateY(-2px);
+}
+
+/* ===== HISTORY PANEL ===== */
+#history-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 300px;
+    background-color: var(--card-bg);
+    border-bottom: 2px solid var(--border-color);
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+#history-panel.history-open {
+    display: block;
+}
+
+#history-content {
+    padding: 1rem;
+    height: calc(100% - 50px);
+    overflow-y: auto;
+}
+
+#history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    height: 50px;
+}
+
+#history-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 0.5rem;
+}
+
+.history-item {
+    padding: 0.8rem;
+    background-color: var(--hover-color);
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.history-item:hover {
+    background-color: var(--active-color);
+    transform: translateY(-2px);
+}
+
+#history-toggle {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1001;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border: 2px solid var(--primary-color);
+    border-radius: 5px;
+    padding: 0.5rem 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+#history-toggle:hover {
+    background-color: #666666;
+    transform: translateY(-2px);
+}
+
+/* ===== TABLES ===== */
+.gpt-table,
+.prices-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 0.9em;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.gpt-table th,
+.gpt-table td,
+.prices-table th,
+.prices-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border: 1px solid var(--border-color);
+}
+
+.gpt-table th,
+.prices-table th {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+}
+
+.gpt-table tr:nth-child(even),
+.prices-table tr:nth-child(even) {
+    background-color: var(--card-bg);
+}
+
+.gpt-table tr:hover,
+.prices-table tr:hover {
+    background-color: var(--hover-color);
+}
+
+/* Excel table specific */
+#excel-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-family: "New Century Schoolbook", serif;
+}
+
+#excel-table-container th,
+#excel-table-container td {
+    border: 1px solid var(--border-color);
+    padding: 8px;
+}
+
+#excel-table-container th {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+#excel-table-container tr:nth-child(even) {
+    background-color: var(--card-bg);
+}
+
+#excel-table-container tr:hover {
+    background-color: var(--hover-color);
+}
+
+/* ===== TABLE CONTROLS ===== */
+.table-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+    padding: 15px;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.bulk-insert-controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.bulk-insert-controls .btn-black {
+    flex: 1;
+}
+
+/* ===== DROPDOWN MENUS ===== */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 220px;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    z-index: 1000;
+    overflow: hidden;
+    font-family: inherit;
+    margin-top: 8px;
+}
+
+.dropdown-menu div {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropdown-menu div:last-child {
+    border-bottom: none;
+}
+
+.dropdown-menu div:hover {
+    background-color: var(--hover-color);
+    transform: translateX(5px);
+}
+
+.dropdown-menu div.active {
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.menu-separator {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    margin: 5px 0;
+}
+
+.filter-menu {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.filter-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.filter-menu::-webkit-scrollbar-track {
+    background: var(--card-bg);
+}
+
+.filter-menu::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.filter-menu::-webkit-scrollbar-thumb:hover {
+    background: var(--active-color);
+}
+
+/* ===== MODALS ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    width: 95%;
+    max-width: 1200px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+/* ===== FORMS & INPUTS ===== */
+input[type="number"],
+input[type="text"],
+input[type="file"],
+#excel-filename {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 10px;
+    background-color: #ffffff;
+    font-family: inherit;
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+input[type="file"]:focus,
+#excel-filename:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(218, 229, 225, 0.2);
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: var(--primary-color);
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* ===== SECTIONS & CARDS ===== */
+.section {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.item-block {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 15px;
+    cursor: pointer;
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.item-details {
+    display: none;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.item-details.active {
+    display: block;
+}
+
+/* ===== TABS ===== */
+.tab-container {
+    margin-top: 20px;
+}
+
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 15px;
+}
+
+.tab {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.tab.active {
+    border-bottom: 3px solid var(--accent-color);
+    font-weight: bold;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ===== STORES PANEL ===== */
+.stores-panel {
+    position: fixed;
+    right: 20px;
+    top: 100px;
+    width: 380px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-height: 75vh;
+    overflow-y: auto;
+    font-family: inherit;
+    animation: slideIn 0.3s ease-out;
+}
+
+.stores-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.stores-header h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.toggle-stores {
+    background: var(--accent-color);
+    color: #ffffff;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-stores:hover {
+    background: #666666;
+    transform: rotate(90deg);
+}
+
+/* ===== FORM GROUPS ===== */
+.radio-group {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    color: var(--text-color);
+    font-weight: bold;
+}
+
+.coefficient-group {
+    margin-bottom: 15px;
+}
+
+.coefficient-label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+    color: var(--light-text);
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.price-form {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: var(--card-bg);
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+/* ===== STORES COMPONENTS ===== */
+.stores-search {
+    margin-bottom: 15px;
+}
+
+.stores-search input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #ffffff;
+    transition: all 0.3s;
+}
+
+.stores-search input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(218, 229, 225, 0.2);
+}
+
+.stores-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.preset-btn {
+    padding: 8px 12px;
+    background: var(--hover-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-color);
+    transition: all 0.3s;
+    font-family: inherit;
+    font-weight: 500;
+}
+
+.preset-btn:hover {
+    background: var(--active-color);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stores-category {
+    margin-bottom: 20px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.category-header {
+    background: var(--hover-color);
+    padding: 12px 15px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--text-color);
+    transition: all 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.category-header:hover {
+    background: var(--active-color);
+}
+
+.category-count {
+    font-size: 11px;
+    color: var(--light-text);
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.stores-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 12px;
+    background: var(--card-bg);
+    transition: all 0.3s;
+}
+
+.store-btn {
+    padding: 8px 12px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-color);
+    transition: all 0.3s;
+    font-family: inherit;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.store-btn:hover {
+    background: var(--hover-color);
+    border-color: var(--active-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.store-btn.selected {
+    background: var(--accent-color);
+    color: #ffffff;
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.store-btn.selected::before {
+    content: "✓";
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* ===== SELECTED STORES ===== */
+.selected-stores-controls {
+    margin-top: 20px;
+    padding: 15px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.selected-stores-controls strong {
+    color: var(--text-color);
+    font-size: 14px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+#selected-stores-count {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+#selected-stores-list {
+    color: var(--light-text);
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 15px;
+    min-height: 20px;
+    padding: 8px;
+    background: var(--card-bg);
+    border-radius: 4px;
+    border: 1px dashed var(--border-color);
+}
+
+.stores-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.stores-actions button {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    transition: all 0.3s;
+    flex: 1;
+    min-width: 80px;
+}
+
+.stores-actions .clear-btn {
+    background: var(--hover-color);
+    color: var(--text-color);
+}
+
+.stores-actions .clear-btn:hover {
+    background: var(--active-color);
+    transform: translateY(-1px);
+}
+
+.stores-actions .prices-btn {
+    background: var(--accent-color);
+    color: #ffffff;
+    border-color: var(--accent-color);
+}
+
+.stores-actions .prices-btn:hover {
+    background: #666666;
+    transform: translateY(-1px);
+}
+
+.quick-search {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.quick-search input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: inherit;
+    background: #ffffff;
+}
+
+.quick-search input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.quick-search button {
+    padding: 8px 12px;
+    background: var(--accent-color);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.quick-search button:hover {
+    background: #666666;
+    transform: translateY(-1px);
+}
+
+/* ===== SCRIPTS DROPDOWN ===== */
+#scripts-dropdown {
+    margin-top: 0.5rem;
+}
+
+#scripts-dropdown summary {
+    cursor: pointer;
+    font-weight: bold;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    padding: 0.5rem;
+    border-radius: 5px;
+    list-style: none;
+    border: 2px solid var(--primary-color);
+}
+
+#scripts-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.script-btn {
+    background-color: var(--hover-color);
+    color: #000;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 0.6rem;
+    text-align: left;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 0.9rem;
+}
+
+.script-btn:hover {
+    background-color: var(--active-color);
+}
+
+/* ===== INSERT COMPONENTS ===== */
+.insert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.insert-item {
+    padding: 10px 14px;
+    background: var(--hover-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.insert-item:hover {
+    background: var(--active-color);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* ===== SEARCH & LINKS ===== */
+.search-results {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #ffffff;
+}
+
+.search-links {
+    margin-top: 15px;
+    padding: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.search-link-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.search-link-item a {
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.search-link-item:hover {
+    background: var(--hover-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.store-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.store-link {
+    background-color: var(--secondary-color);
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 14px;
+    display: inline-block;
+}
+
+.store-link:hover {
+    background-color: var(--accent-color);
+    color: #ffffff;
+}
+
+/* ===== FILE UPLOAD ===== */
+.file-upload {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.file-upload input[type="file"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+
+.file-upload span {
+    display: inline-block;
+    background-color: var(--accent-color);
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border-color);
+    font-weight: bold;
+    transition: all 0.2s;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.file-upload:hover span {
+    background-color: #666666;
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== STATUS & MESSAGES ===== */
+#prices-status {
+    padding: 0.5rem;
+    background-color: var(--card-bg);
+    border-radius: 5px;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.status-ok {
+    color: green;
+}
+
+.status-error {
+    color: red;
+}
+
+.success-message {
+    background-color: var(--hover-color);
+    color: #2e7d32;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.warning-message {
+    background-color: var(--hover-color);
+    color: #ed6c02;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.filter-message {
+    background: linear-gradient(135deg, var(--hover-color), var(--card-bg));
+    color: #2e7d32;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 10px;
+    border: 2px solid var(--border-color);
+    font-weight: bold;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* ===== UTILITY CLASSES ===== */
+.hidden {
+    display: none;
+}
+
+#filename-preview {
+    color: #666;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+
+/* ===== SCROLLBARS ===== */
+.stores-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.stores-panel::-webkit-scrollbar-track {
+    background: var(--card-bg);
+    border-radius: 3px;
+}
+
+.stores-panel::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.stores-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--active-color);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    /* Chat & Layout */
+    #chat-container {
+        padding: 0.5rem;
+        padding-top: 50px;
+    }
+    
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        position: static;
+        max-height: none;
+    }
+    
+    /* History & Scripts */
+    #history-list,
+    #scripts-list {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Buttons & Controls */
+    .buttons-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    button.send-btn,
+    button.clear-btn,
+    .excel-btn,
+    .reload-btn,
+    .smeta-btn,
+    .stores-main-btn,
+    .downloadBtn,
+    .copy-table-btn,
+    .open-excel-modal,
+    .prices-btn,
+    .btn-black {
+        width: 100%;
+    }
+    
+    .table-controls,
+    .bulk-insert-controls {
+        flex-direction: column;
+    }
+    
+    /* Modals */
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        max-width: none;
+    }
+    
+    /* Forms */
+    .form-row {
+        flex-direction: column;
+    }
+    
+    /* Stores Panel */
+    .stores-panel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90vw;
+        max-width: 400px;
+        max-height: 80vh;
+    }
+    
+    .stores-presets,
+    .stores-actions {
+        flex-direction: column;
+    }
+    
+    .quick-search {
+        flex-direction: column;
+    }
+    
+    .quick-search input,
+    .quick-search button {
+        width: 100%;
+    }
+    
+    /* Dropdowns */
+    .dropdown {
+        width: 100%;
+    }
+    
+    .dropdown-menu {
+        width: 100%;
+        min-width: auto;
+        position: relative;
+    }
+}
+
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>GPT Chat для расчета смет</h1>
+    </header>
+
+    <button id="history-toggle" onclick="toggleHistory()">История запросов</button>
+
+    <div id="history-panel">
+        <div id="history-header">
+            <h3>История запросов</h3>
+            <button class="clear-btn" onclick="clearMessages()">Очистить историю</button>
+        </div>
+        <div id="history-content">
+            <div id="history-list"></div>
+        </div>
+    </div>
+
+    <div id="prices-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePricesModal()">&times;</span>
+            <h2>Редактор расценок</h2>
+
+            <div class="price-form">
+                <h3>Добавить/редактировать расценку</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="price-number">Номер:</label>
+                        <input type="number" id="price-number" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price-name">Наименование:</label>
+                        <input type="text" id="price-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price-unit">Единица:</label>
+                        <input type="text" id="price-unit" value="м2" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="price-golden">Цена Голден:</label>
+                        <input type="text" id="price-golden">
+                    </div>
+                    <div class="form-group">
+                        <label for="price-utkur">Цена Уткур:</label>
+                        <input type="text" id="price-utkur">
+                    </div>
+                </div>
+                <div class="form-buttons">
+                    <button class="prices-btn" onclick="savePrice()">Сохранить</button>
+                    <button class="clear-btn" onclick="clearPriceForm()">Очистить</button>
+                </div>
+            </div>
+
+            <div id="prices-table-container">
+                <h3>Текущие расценки</h3>
+                <table class="prices-table">
+                    <thead>
+                        <tr>
+                            <th>Номер</th>
+                            <th>Наименование</th>
+                            <th>Единица</th>
+                            <th>Цена Голден</th>
+                            <th>Цена Уткур</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prices-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="smeta-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSmetaModal()">&times;</span>
+            <h2>Расчет сметы</h2>
+            <div class="container">
+                <div class="main-content">
+                    <div class="section">
+                        <h2>Метод расчета</h2>
+                        <div class="radio-group" id="methodRadioGroup">
+                            <label>
+                                <input type="radio" name="method" value="РИМ (Ресурсно-индексный)" checked>
+                                РИМ (Ресурсно-индексный)
+                            </label>
+                            <label>
+                                <input type="radio" name="method" value="БИМ (Базисно-индексный)">
+                                БИМ (Базисно-индексный)
+                            </label>
+                        </div>
+
+                        <div id="bimCoefficients" class="hidden">
+                            <h3>Коэффициенты для БИМ</h3>
+                            <div class="coefficient-group">
+                                <label class="coefficient-label" for="generalCoefficient">Введите коэффициент для
+                                    материалов:</label>
+                                <input type="number" id="generalCoefficient" value="1.0" min="0.1" step="0.1">
+                            </div>
+                            <div class="coefficient-group">
+                                <label class="coefficient-label" for="tcCoefficientBIM">Введите коэффициент для
+                                    оборудования:</label>
+                                <input type="number" id="tcCoefficientBIM" value="1.0" min="0.1" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2>Загрузка файла Excel</h2>
+                        <label class="file-upload">
+                            <input type="file" id="excelFile" accept=".xlsx, .xls">
+                            <span>Выберите файл Excel</span>
+                        </label>
+                        <div id="fileWarning" class="warning-message hidden">Пожалуйста, выберите файл Excel</div>
+                    </div>
+
+                    <div class="section hidden" id="resultsSection">
+                        <h2>Результаты сметы</h2>
+
+                        <div class="tab-container">
+                            <div class="tabs">
+                                <div class="tab active" data-tab="materials">Материалы и Работы</div>
+                                <div class="tab" data-tab="equipment">Оборудование</div>
+                            </div>
+
+                            <div class="tab-content active" id="materialsTab">
+                                <div id="materialsResults"></div>
+                            </div>
+
+                            <div class="tab-content" id="equipmentTab">
+                                <div id="equipmentResults"></div>
+                            </div>
+                        </div>
+                        <div class="buttons-row">
+  <button id="openInsertModal" class="btn-black" style="display:none;">Вставить</button>
+</div>
+                        <div class="section hidden" id="downloadSection">
+                            <h2>Скачать результаты</h2>
+                            <input type="text" id="fileName" placeholder="Введите имя файла">
+                            <button id="downloadBtn">Скачать Excel</button>
+                            <div id="downloadWarning" class="warning-message hidden">Введите имя файла для скачивания
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar">
+                    <div class="section">
+                        <h2>Выбор магазинов</h2>
+
+                        <div class="store-category">
+                            <label>
+                                <input type="checkbox" id="selectAllStores">
+                                Выбрать все магазины
+                            </label>
+                        </div>
+
+                        <div id="storesList"></div>
+
+                        <h3>Поиск по магазинам</h3>
+                        <input type="text" id="storeSearch" placeholder="Введите запрос для поиска">
+
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="searchType" value="all" checked>
+                                Все магазины
+                            </label>
+                            <label>
+                                <input type="radio" name="searchType" value="selected">
+                                Выбранные магазины
+                            </label>
+                        </div>
+
+                        <div id="searchResults" class="search-results hidden"></div>
+                    </div>
+
+                    <div class="section">
+                        <h2>Выбранные магазины</h2>
+                        <div id="selectedStoresList"></div>
+                    </div>
+                </div>
+            </div>
+<!-- Модалка вставки -->
+<div id="insertModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeInsertModal()">&times;</span>
+    <h2 style="margin-bottom:15px; color:#444;">Выберите элементы для вставки</h2>
+
+    <!-- Кнопки вставки -->
+    <div class="bulk-insert-controls" style="margin:10px 0;">
+      <button class="btn-black" onclick="insertAllItems()">Вставить все</button>
+      <button class="btn-black" onclick="insertSelectedItems()">Вставить выбранное</button>
+    </div>
+
+    <!-- Поиск -->
+    <div style="margin-bottom:15px;">
+      <input type="text" id="insertSearchInput" placeholder="Поиск..." 
+             style="width:100%; padding:10px; border:1px solid #ffb6c1; border-radius:6px;">
+    </div>
+
+    <!-- Список элементов -->
+    <div class="insert-list" id="insertList"></div>
+  </div>
+</div>
+        </div>
+    </div>
+    <div class="main-container">
+        <div id="chat-container">
+            <div id="messages">
+                <div class="message gpt">Добро пожаловать! Напишите сообщение...</div>
+            </div>
+
+            <div id="prices-status">Загрузка статуса цен...</div>
+
+            <div id="chat-controls">
+                <textarea id="input" placeholder="Введите сообщение" oninput="autoResize(this)"></textarea>
+
+                <div class="buttons-row">
+                    <button class="send-btn" onclick="sendMessage()">Отправить</button>
+                    <button class="clear-btn" onclick="clearMessages()">Очистить чат</button>
+                    <button class="clear-btn" onclick="showFullHistoryInChat()">Вся история</button>
+                    <button id="open-excel-modal">Загрузить Excel</button>
+                    <button class="reload-btn" onclick="reloadPrices()">Перезагрузить цены</button>
+                    <button class="prices-btn" onclick="openPricesModal()">Редактор расценок</button>
+                    <button class="smeta-btn" onclick="openSmetaModal()">Расчет сметы</button>
+                    <button class="stores-main-btn" onclick="toggleStoresPanel()">Магазины</button>
+                </div>
+                <details id="scripts-dropdown">
+                    <summary>Готовые скрипты для сметы</summary>
+                    <div id="scripts-list">
+
+                        <button class="script-btn" data-script="Ты — эксперт по строительным сметам в Томской области.
+Рассчитай смету для объекта:
+
+Тип объекта: [квартира, дом, офис и т.д.]
+Регион: Томск
+Площадь: [X] м²
+Материалы: [перечислить материалы с количеством или описанием]
+
+Требуется:
+
+Рассчитать точное количество каждого материала.
+Указать ориентировочную стоимость с учётом доставки и наценок поставщиков Томска.
+
+Формат вывода:
+
+Таблица в Markdown со столбцами: Материал | Ед. изм. | Количество | Цена за единицу (руб.) | Итоговая стоимость (руб.).
+После таблицы дай краткие пояснения и рекомендации.">Расчет материалов</button>
+
+                        <button class="script-btn" data-script="Ты — строительный аналитик.
+Сделай прогноз затрат на материалы:
+
+Используй данные по типу объекта и площади.
+Учти сезонные колебания цен и транспортные расходы в Томской области.
+
+Требуется:
+
+Вывести итоговую стоимость по каждому материалу.
+Рассчитать общую стоимость проекта.
+Предложить альтернативные материалы с сопоставимой стоимостью и характеристиками.
+
+Формат:
+
+Markdown-таблица: Материал | Цена за единицу | Итоговая стоимость | Альтернативы.
+Краткое заключение после таблицы.">Прогноз затрат на
+                            материалы</button>
+
+                        <button class="script-btn" data-script="Ты — консультант по строительным материалам.
+Сравни стоимость двух вариантов:
+
+Вариант 1: [материал или услуга 1]
+Вариант 2: [материал или услуга 2]
+Для: [тип объекта или объем работ]
+Регион: Томская область
+
+Требуется:
+
+Указать цену за единицу, общую стоимость, разницу между вариантами.
+Дать рекомендацию по выбору.
+
+Формат:
+
+Markdown-таблица: Вариант | Цена за единицу | Общая стоимость | Разница.
+В конце текстовое пояснение.">Сравнение материалов/услуг</button>
+
+                        <button class="script-btn" data-script="Ты — эксперт по закупкам.
+Сравни поставщиков по смете:
+
+Для каждого материала рассчитай среднюю цену по всем поставщикам.
+Определи минимальную и максимальную стоимость.
+Учти транспортные расходы и сезонные колебания.
+
+Формат:
+
+Markdown-таблица: Материал | Мин. цена | Макс. цена | Средняя цена | Рекомендация.">Сравнение поставщиков</button>
+
+                        <button class="script-btn" data-script="Ты — сметчик.
+Оцени стоимость работ:
+
+Вид работ: [монтаж, отделка, электромонтаж и т.д.]
+Объем: [квадратные или погонные метры]
+Особенности: [высота потолков, сложность работ, необходимость спецоборудования]
+Регион: Томск
+
+Требуется:
+
+Указать расценки за единицу (м² или м.п.).
+Рассчитать итоговую стоимость.
+
+Формат:
+
+Таблица: Вид работ | Ед. изм. | Стоимость за единицу | Итоговая сумма.">Калькуляция
+                            работ</button>
+
+                        <button class="script-btn"
+                            data-script="Ты — аналитик по рынку стройматериалов.
+Проанализируй актуальные цены на материалы и работы, если единица измерения 100м², то мы 100*количество:
+
+Материал или работа: [указать]
+Регион: Томская область
+Учти: сезонность, доставку, средние цены по магазинам.
+
+Формат:
+
+Таблица: Номер позиции| Единица измерения по смете| Наименование | Средняя цена за единицу в Томске | Стоимость для объема | Количество.">Анализ
+                            актуальных цен</button>
+
+                        <button class="script-btn" data-script="Ты — эксперт по оптимизации смет.
+Проанализируй смету из Excel:
+
+Используй данные из всех магазинов, указанных в смете.
+Рассчитай примерные расценки для каждого материала и вида работы.
+Учти средние цены и доставку.
+
+Формат:
+
+Итоговая таблица с расчетами (в Markdown).
+После таблицы рекомендации по оптимизации.">Анализ сметы из Excel</button>
+
+                        <button class="script-btn" data-script="Ты — консультант по строительным проектам.
+Сформируй клиентский отчет по смете:
+
+Включи все материалы и работы с их количеством и стоимостью.
+Добавь суммарные затраты.
+Дай рекомендации по оптимизации.
+
+Формат:
+
+Удобная таблица.
+После таблицы — текстовый раздел «Выводы и рекомендации».">Отчет по смете</button>
+
+                        <button class="script-btn" data-script="Ты — эксперт по снижению затрат.
+Оптимизируй смету:
+
+Проанализируй все материалы и работы.
+Предложи альтернативы с аналогичными характеристиками, учитывая доставку и сезонные наценки.
+
+Формат:
+
+Обновленная таблица: Наименование | Текущая стоимость | Оптимизированный вариант | Экономия.
+Пояснения после таблицы.">Оптимизация
+                            сметы</button>
+
+                    </div>
+                </details>
+
+            </div>
+        </div>
+    </div>
+    <!-- Панель магазинов -->
+    <div id="stores-panel" class="stores-panel" style="display: none;">
+        <div class="stores-header">
+            <h3>Выбор магазинов</h3>
+            <button class="toggle-stores" onclick="toggleStoresPanel()">×</button>
+        </div>
+        <div class="stores-search">
+            <input type="text" id="stores-search-input" placeholder="Поиск магазина..."
+                oninput="searchStores(this.value)">
+        </div>
+
+        <div class="stores-presets">
+            <button class="preset-btn" onclick="quickSelectStores('все_стройматериалы')">Все стройматериалы</button>
+            <button class="preset-btn" onclick="quickSelectStores('электрика_сантехника')">Электрика +
+                Сантехника</button>
+            <button class="preset-btn" onclick="quickSelectStores('базовые')">Базовые</button>
+        </div>
+
+        <div class="stores-categories" id="stores-categories">
+        </div>
+        <div class="selected-stores-controls">
+            <div style="margin-bottom: 10px;">
+                <strong>Выбрано: <span id="selected-stores-count">0</span> магазинов</strong>
+                <div id="selected-stores-list">нет</div>
+            </div>
+
+            <div class="stores-actions">
+                <button class="clear-btn" onclick="clearSelectedStores()">Очистить</button>
+                <button class="prices-btn" onclick="insertStoresToSearch()">Вставить в поиск</button>
+                <button class="copy-btn" onclick="copyStoresList()">Копировать</button>
+            </div>
+            <div class="quick-search">
+                <input type="text" id="quick-search-query" placeholder="Что ищем?">
+                <button
+                    onclick="openStoresInNewTabs(document.getElementById('quick-search-query').value)">Искать</button>
+            </div>
+            <div id="search-links-wrapper" class="search-links hidden">
+                <strong>Результаты поиска:</strong>
+                <div id="search-links-list"></div>
+                <button id="copy-all-links" class="copy-btn">Скопировать все ссылки</button>
+            </div>
+
+        </div>
+    </div>
+    <!-- Модальное окно для названия файла -->
+    <div id="filename-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="closeFilenameModal()">&times;</span>
+            <h3>Скачать таблицу в Excel</h3>
+            <div class="form-group">
+                <label for="excel-filename">Название файла:</label>
+                <input type="text" id="excel-filename" placeholder="Введите название файла" value="таблица">
+                <small>Файл будет сохранен как: <span id="filename-preview">таблица.xlsx</span></small>
+            </div>
+            <div class="form-buttons" style="margin-top: 20px;">
+                <button class="prices-btn" onclick="confirmDownload()">Скачать</button>
+                <button class="clear-btn" onclick="closeFilenameModal()">Отмена</button>
+            </div>
+        </div>
+    </div>
+    <div id="excel-modal" class="modal hidden">
+    <div class="modal-content">
+        <span class="close" id="close-excel-modal">&times;</span>
+        <h3>Загрузка и просмотр Excel</h3>
+        <input type="file" id="excel-file-input" accept=".xlsx, .xls" />
+        
+        <!-- Панель листов -->
+        <div id="sheet-tabs" style="margin-top:10px; display:flex; gap:5px;"></div>
+        
+        <!-- Контейнер таблицы -->
+        <div id="excel-table-container" style="margin-top:10px;"></div>
+        
+        <!-- Кнопка копирования текущей таблицы -->
+        <button id="copy-table-btn">Копировать таблицу</button>
+    </div>
+</div>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script>
+        const storesData = {
+            "Строительные материалы": [
+                ["Спектр Томск", "https://spektr-tomsk.ru/search/?query={query}"],
+                ["Стройса", "https://www.stroyssa.tomsk.ru/search/?q={query}"],
+                ["СтройПарк", "https://stroyparkdiy.ru/search?search={query}"],
+                ["Сатурн", "https://tomsk.saturn.net/catalog/search/?q={query}"],
+                ["СтройДвор70", "https://stroydvor70.ru/search/?query={query}"],
+                ["СтройДвор Томск", "https://stroydvor.tomsk.ru/search/?q{query}"],
+                ["СД70", "https://sd70.ru/search/?query={query}"],
+                ["АвтоСтройЛавка", "https://avtostroylavka70.ru/search/?query={query}"],
+                ["М-Плюс", "https://mplus.tomsk.ru/search/?q={query}"],
+                ["СтройМастер", "https://stroimaster.tomsk.ru/search/?q={query}"],
+                ["SMT Group", "https://smt-group.ru/search/?q={query}"],
+                ["ВсеИнструменты", "https://www.vseinstrumenti.ru/search/?q={query}"],
+                ["НСК-Строй", "https://nsk-stroy.com/search/?q={query}"],
+                ["Опт-Стройка", "https://opt-stroyka.ru/search/?q={query}"],
+                ["Строй-Мат54", "https://stroy-mat54.ru/search/?q={query}"],
+                ["LemanaPro", "https://novosibirsk.lemanapro.ru/search/?q={query}"],
+                ["Ладья", "https://www.ladya.pro/search/?q={query}"],
+                ["ТомскЛес", "https://tomskles.su/search/?q={query}"],
+                ["Амбар-С", "https://tomsk.ambar-s.ru/search/?q={query}"]
+            ],
+            "Вода (сантехника)": [
+                ["Waterman", "https://waterman-t.ru/search/?q={query}"],
+                ["Водолей", "https://томск.водолей.рф/search?q={query}"],
+                ["Сантехника", "https://tomsk.santehnica.ru/search/?q={query}"],
+                ["Смесители Томск", "https://smesiteli-tomsk.ru/search/?q={query}"]
+            ],
+            "Крепеж": [
+                ["Крепеж70", "https://krepeg70.ru/search/?q={query}"],
+                ["ПромКрепеж", "https://tomsk.promkrepezh.ru/search/?q={query}"]
+            ],
+            "Утеплитель": [
+                ["ТСТН", "https://tomsk.tstn.ru/search/?q={query}"]
+            ],
+            "Металл": [
+                ["Ferrum-N", "https://tomsk.ferrum-n.ru/search/?q={query}"],
+                ["ANEP Metall", "https://kemerovo.anepmetall.ru/search/?q={query}"],
+                ["SMT Group (металл)", "https://smt-group.ru/search/?q={query}"],
+                ["СПК", "https://tomsk.spk.ru/search/?q={query}"],
+                ["ЕвроМет", "https://ewromet.ru/search/?q={query}"],
+                ["МеталлоБаза", "https://metallobazan.ru/search/?q={query}"],
+                ["МеталлКомфорт", "https://metallkomfort.ru/search/?q{query}"]
+            ],
+            "Кровля/фасады": [
+                ["МеталлПрофиль", "https://tomsk.metallprofil.ru/search/?q={query}"],
+                ["ArealMetall", "https://arealmetall.com/search/?q={query}"],
+                ["DTM", "https://tomsk.dtm.ru/search/?q={query}"],
+                ["КровельныйЦентр", "https://кровельныйцентр.рф/search?query={query}"]
+            ],
+            "Электрика": [
+                ["Сиб-А", "https://www.sib-a.ru/search/?q={query}"],
+                ["RS24", "https://rs24.ru/search.html?q={query}"],
+                ["ЭТМ", "https://www.etm.ru/catalog?searchValue={query}"],
+                ["ChipDip", "https://www.chipdip.ru/search?searchtext={query}"],
+                ["МиниМакс", "https://www.minimaks.ru/catalog/?q={query}"]
+            ],
+            "Пиломатериал": [
+                ["EcoLes", "https://ecoles-tomsk.ru/search/?q={query}"],
+                ["ТД Лесной", "https://www.tdlesnoy.com/search/?q={query}"]
+            ],
+            "Двери": [
+                ["World of Doors", "https://worldofdoors.ru/search?query={query}"],
+                ["Gallery of Doors", "https://galleryofdoors.ru/search?search={query}"],
+                ["Фабрика Дверей", "https://фабрикадверей.рф/tomsk/search?query={query}"]
+            ],
+            "Вентиляция": [
+                ["НеваТом", "https://www.nevatom.ru/search/?q={query}"],
+                ["TomVent", "https://tomvent.ru/search/?q={query}"],
+                ["VentGrad70", "https://ventgrad70.ru/search/?q={query}"]
+            ],
+            "Базовые магазины": [
+                ["ЯндексМаркет", "https://market.yandex.ru/search?text={query}"]
+            ]
+        };
+        let panelSelectedStores = [];
+        function toggleStoresPanel() {
+            const panel = document.getElementById('stores-panel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                if (!panel.dataset.initialized) {
+                    initStoresPanel();
+                    panel.dataset.initialized = 'true';
+                }
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+
+        function initStoresPanel() {
+            const container = document.getElementById('stores-categories');
+            container.innerHTML = '';
+
+            for (const [category, stores] of Object.entries(storesData)) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'stores-category';
+
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.innerHTML = `${category} <span style="float: right; font-size: 11px; color: #666;">${stores.length}</span>`;
+                header.onclick = () => {
+                    const buttons = categoryDiv.querySelector('.stores-buttons');
+                    buttons.style.display = buttons.style.display === 'none' ? 'flex' : 'none';
+                };
+
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'stores-buttons';
+                buttonsDiv.style.display = 'none';
+
+                stores.forEach(([storeName, storeUrl]) => {
+                    const button = document.createElement('button');
+                    button.className = 'store-btn';
+                    button.textContent = storeName;
+                    button.onclick = (e) => {
+                        e.stopPropagation();
+                        toggleStoreSelection(storeName, button);
+                    };
+                    buttonsDiv.appendChild(button);
+                });
+
+                categoryDiv.appendChild(header);
+                categoryDiv.appendChild(buttonsDiv);
+                container.appendChild(categoryDiv);
+            }
+
+            updateSelectedStoresDisplay();
+        }
+        function toggleStoreSelection(storeName, button) {
+            const index = panelSelectedStores.indexOf(storeName);
+
+            if (index === -1) {
+                panelSelectedStores.push(storeName);
+                button.classList.add('selected');
+            } else {
+                panelSelectedStores.splice(index, 1);
+                button.classList.remove('selected');
+            }
+
+            updateSelectedStoresDisplay();
+        }
+
+        function updateSelectedStoresDisplay() {
+            const display = document.getElementById('selected-stores-list');
+            const count = document.getElementById('selected-stores-count');
+
+            count.textContent = panelSelectedStores.length;
+
+            if (panelSelectedStores.length === 0) {
+                display.textContent = 'нет';
+            } else {
+                display.textContent = panelSelectedStores.join(', ');
+            }
+        }
+
+        function insertStoresToSearch() {
+            if (panelSelectedStores.length === 0) {
+                alert('Сначала выберите магазины!');
+                return;
+            }
+
+            const input = document.getElementById('input');
+            const storesText = panelSelectedStores.join(', ');
+
+            if (input.value.includes('Магазины:')) {
+                input.value = input.value.replace(/Магазины:.*/, `Магазины: ${storesText}`);
+            } else {
+                input.value += (input.value ? '\n' : '') + `Магазины: ${storesText}`;
+            }
+
+            autoResize(input);
+            input.focus();
+        }
+
+        function clearSelectedStores() {
+            panelSelectedStores = [];
+            document.querySelectorAll('.store-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            updateSelectedStoresDisplay();
+        }
+
+        function searchStores(query) {
+            const searchTerm = query.toLowerCase();
+
+            document.querySelectorAll('.stores-category').forEach(category => {
+                let hasVisibleStores = false;
+                const storeButtons = category.querySelectorAll('.store-btn');
+
+                storeButtons.forEach(button => {
+                    if (button.textContent.toLowerCase().includes(searchTerm)) {
+                        button.style.display = 'inline-block';
+                        hasVisibleStores = true;
+                        const buttonsDiv = category.querySelector('.stores-buttons');
+                        buttonsDiv.style.display = 'flex';
+                    } else {
+                        button.style.display = 'none';
+                    }
+                });
+
+                category.style.display = hasVisibleStores ? 'block' : 'none';
+            });
+        }
+        function quickSelectStores(preset) {
+            const presets = {
+                'все_стройматериалы': storesData['Строительные материалы'].map(s => s[0]),
+                'электрика_сантехника': [
+                    ...storesData['Электрика'].map(s => s[0]),
+                    ...storesData['Вода (сантехника)'].map(s => s[0])
+                ],
+                'базовые': ['ЯндексМаркет', 'ВсеИнструменты', 'Спектр Томск']
+            };
+            if (presets[preset]) {
+                panelSelectedStores = [...presets[preset]];
+                document.querySelectorAll('.store-btn').forEach(btn => {
+                    if (panelSelectedStores.includes(btn.textContent)) {
+                        btn.classList.add('selected');
+                    } else {
+                        btn.classList.remove('selected');
+                    }
+                });
+                updateSelectedStoresDisplay();
+            }
+        }
+
+        function copyStoresList() {
+            if (panelSelectedStores.length === 0) {
+                alert('Нет выбранных магазинов!');
+                return;
+            }
+
+            const storesText = panelSelectedStores.join(', ');
+            navigator.clipboard.writeText(storesText)
+                .then(() => alert('Список магазинов скопирован!'))
+                .catch(err => alert('Ошибка копирования'));
+        }
+        function openStoresInNewTabs(searchQuery) {
+            if (panelSelectedStores.length === 0) {
+                alert('Сначала выберите магазины!');
+                return;
+            }
+
+            if (!searchQuery.trim()) {
+                alert('Введите поисковый запрос!');
+                return;
+            }
+
+            const urls = [];
+
+            for (const storeName of panelSelectedStores) {
+                let storeUrl = null;
+
+                outer: for (const category of Object.values(storesData)) {
+                    for (const store of category) {
+                        if (store[0] === storeName) {
+                            storeUrl = store[1];
+                            break outer;
+                        }
+                    }
+                }
+
+                if (storeUrl) {
+                    urls.push({
+                        name: storeName,
+                        url: storeUrl.replace('{query}', encodeURIComponent(searchQuery))
+                    });
+                }
+            }
+
+            const wrapper = document.getElementById("search-links-wrapper");
+            const listDiv = document.getElementById("search-links-list");
+            wrapper.classList.remove("hidden");
+
+            if (urls.length) {
+                listDiv.innerHTML = urls.map(
+                    s => `<div class="search-link-item">
+                     <a href="${s.url}" target="_blank">${s.name}</a>
+                     <a href="${s.url}" target="_blank">🔗</a>
+                  </div>`
+                ).join("");
+            } else {
+                listDiv.innerHTML = '<em>Ссылки не найдены</em>';
+            }
+
+            // копирование всех ссылок
+            document.getElementById("copy-all-links").onclick = () => {
+                const allLinks = urls.map(s => s.url).join("\n");
+                navigator.clipboard.writeText(allLinks).then(() => {
+                    alert("Ссылки скопированы!");
+                });
+            };
+        }
+
+        document.addEventListener('click', function (event) {
+            const panel = document.getElementById('stores-panel');
+            if (panel && panel.style.display === 'block' &&
+                !panel.contains(event.target) &&
+                !event.target.classList.contains('stores-main-btn')) {
+                panel.style.display = 'none';
+            }
+        });
+    </script>
+    <script>
+        const stores = {
+            "Строительные материалы": [
+                ["Спектр Томск", "https://spektr-tomsk.ru/search/?query={query}"],
+                ["Стройса", "https://www.stroyssa.tomsk.ru/search/?q={query}"],
+                ["СтройПарк", "https://stroyparkdiy.ru/search?search={query}"],
+                ["Сатурн", "https://tomsk.saturn.net/catalog/search/?q={query}"],
+                ["СтройДвор70", "https://stroydvor70.ru/search/?query={query}"],
+                ["СтройДвор Томск", "https://stroydvor.tomsk.ru/search/?q{query}"],
+                ["СД70", "https://sd70.ru/search/?query={query}"],
+                ["АвтоСтройЛавка", "https://avtostroylavka70.ru/search/?query={query}"],
+                ["М-Плюс", "https://mplus.tomsk.ru/search/?q={query}"],
+                ["СтройМастер", "https://stroimaster.tomsk.ru/search/?q={query}"],
+                ["SMT Group", "https://smt-group.ru/search/?q={query}"],
+                ["ВсеИнструменты", "https://www.vseinstrumenti.ru/search/?q={query}"],
+                ["НСК-Строй", "https://nsk-stroy.com/search/?q={query}"],
+                ["Опт-Стройка", "https://opt-stroyka.ru/search/?q={query}"],
+                ["Строй-Мат54", "https://stroy-mat54.ru/search/?q={query}"],
+                ["LemanaPro", "https://novosibirsk.lemanapro.ru/search/?q={query}"],
+                ["Ладья", "https://www.ladya.pro/search/?q={query}"],
+                ["ТомскЛес", "https://tomskles.su/search/?q={query}"],
+                ["Амбар-С", "https://tomsk.ambar-s.ru/search/?q={query}"]
+            ],
+            "Вода (сантехника)": [
+                ["Waterman", "https://waterman-t.ru/search/?q={query}"],
+                ["Водолей", "https://томск.водолей.рф/search?q={query}"],
+                ["Сантехника", "https://tomsk.santehnica.ru/search/?q={query}"],
+                ["Смесители Томск", "https://smesiteli-tomsk.ru/search/?q={query}"]
+            ],
+            "Крепеж": [
+                ["Крепеж70", "https://krepeg70.ru/search/?q={query}"],
+                ["ПромКрепеж", "https://tomsk.promkrepezh.ru/search/?q={query}"]
+            ],
+            "Утеплитель": [
+                ["ТСТН", "https://tomsk.tstn.ru/search/?q={query}"]
+            ],
+            "Металл": [
+                ["Ferrum-N", "https://tomsk.ferrum-n.ru/search/?q={query}"],
+                ["ANEP Metall", "https://kemerovo.anepmetall.ru/search/?q={query}"],
+                ["SMT Group (металл)", "https://smt-group.ru/search/?q={query}"],
+                ["СПК", "https://tomsk.spk.ru/search/?q={query}"],
+                ["ЕвроМет", "https://ewromet.ru/search/?q={query}"],
+                ["МеталлоБаза", "https://metallobazan.ru/search/?q={query}"],
+                ["МеталлКомфорт", "https://metallkomfort.ru/search/?q{query}"]
+            ],
+            "Кровля/фасады": [
+                ["МеталлПрофиль", "https://tomsk.metallprofil.ru/search/?q={query}"],
+                ["ArealMetall", "https://arealmetall.com/search/?q={query}"],
+                ["DTM", "https://tomsk.dtm.ru/search/?q={query}"],
+                ["КровельныйЦентр", "https://кровельныйцентр.рф/search?query={query}"]
+            ],
+            "Электрика": [
+                ["Сиб-А", "https://www.sib-a.ru/search/?q={query}"],
+                ["RS24", "https://rs24.ru/search.html?q={query}"],
+                ["ЭТМ", "https://www.etm.ru/catalog?searchValue={query}"],
+                ["ChipDip", "https://www.chipdip.ru/search?searchtext={query}"],
+                ["МиниМакс", "https://www.minimaks.ru/catalog/?q={query}"]
+            ],
+            "Пиломатериал": [
+                ["EcoLes", "https://ecoles-tomsk.ru/search/?q={query}"],
+                ["ТД Лесной", "https://www.tdlesnoy.com/search/?q={query}"]
+            ],
+            "Двери": [
+                ["World of Doors", "https://worldofdoors.ru/search?query={query}"],
+                ["Gallery of Doors", "https://galleryofdoors.ru/search?search={query}"],
+                ["Фабрика Дверей", "https://фабрикадверей.рф/tomsk/search?query={query}"]
+            ],
+            "Вентиляция": [
+                ["НеваТом", "https://www.nevatom.ru/search/?q={query}"],
+                ["TomVent", "https://tomvent.ru/search/?q={query}"],
+                ["VentGrad70", "https://ventgrad70.ru/search/?q={query}"]
+            ],
+            "Базовые магазины": [
+                ["ЯндексМаркет", "https://market.yandex.ru/search?text={query}"]
+            ]
+        };
+
+        let selectedStores = [];
+        let results = [];
+        let equipmentResults = [];
+        let processedData = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            renderStores();
+            setupEventListeners();
+            updateCoefficientVisibility();
+        });
+
+        function setupEventListeners() {
+            document.querySelectorAll('input[name="method"]').forEach(radio => {
+                radio.addEventListener('change', updateCoefficientVisibility);
+            });
+
+            document.getElementById('selectAllStores').addEventListener('change', toggleAllStores);
+            document.getElementById('storeSearch').addEventListener('input', searchStores);
+            document.querySelectorAll('input[name="searchType"]').forEach(radio => {
+                radio.addEventListener('change', searchStores);
+            });
+            document.getElementById('excelFile').addEventListener('change', handleFileUpload);
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function () {
+                    switchTab(this.dataset.tab);
+                });
+            });
+            document.getElementById('downloadBtn').addEventListener('click', downloadExcel);
+        }
+        function updateCoefficientVisibility() {
+            const method = document.querySelector('input[name="method"]:checked').value;
+            const bimCoefficients = document.getElementById('bimCoefficients');
+
+            if (method === 'БИМ (Базисно-индексный)') {
+                bimCoefficients.classList.remove('hidden');
+            } else {
+                bimCoefficients.classList.add('hidden');
+            }
+        }
+        function renderStores() {
+            const storesList = document.getElementById('storesList');
+            storesList.innerHTML = '';
+
+            for (const [category, storeList] of Object.entries(stores)) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'store-category';
+
+                const categoryHeader = document.createElement('h3');
+                categoryHeader.textContent = category;
+
+                const selectAll = document.createElement('label');
+                selectAll.innerHTML = `<input type="checkbox" class="category-select-all" data-category="${category}"> Выбрать все в ${category}`;
+                selectAll.querySelector('input').addEventListener('change', function () {
+                    toggleCategoryStores(category, this.checked);
+                });
+
+                categoryDiv.appendChild(categoryHeader);
+                categoryDiv.appendChild(selectAll);
+
+                storeList.forEach(store => {
+                    const [storeName, storeUrl] = store;
+                    const storeItem = document.createElement('div');
+                    storeItem.className = 'store-item';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = `store_${storeName}`;
+                    checkbox.value = storeName;
+                    checkbox.dataset.url = storeUrl;
+                    checkbox.addEventListener('change', function () {
+                        updateSelectedStore(storeName, storeUrl, this.checked);
+                    });
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `store_${storeName}`;
+                    label.textContent = storeName;
+
+                    storeItem.appendChild(checkbox);
+                    storeItem.appendChild(label);
+                    categoryDiv.appendChild(storeItem);
+                });
+
+                storesList.appendChild(categoryDiv);
+            }
+
+            updateSelectedStoresList();
+        }
+        function toggleAllStores() {
+            const selectAll = document.getElementById('selectAllStores').checked;
+            document.querySelectorAll('.store-item input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = selectAll;
+                const storeName = checkbox.value;
+                const storeUrl = checkbox.dataset.url;
+                updateSelectedStore(storeName, storeUrl, selectAll);
+            });
+            document.querySelectorAll('.category-select-all').forEach(checkbox => {
+                checkbox.checked = selectAll;
+            });
+        }
+        function toggleCategoryStores(category, selected) {
+            const categoryStores = stores[category];
+            if (!categoryStores) return;
+
+            categoryStores.forEach(store => {
+                const [storeName, storeUrl] = store;
+                const checkbox = document.querySelector(`#store_${storeName}`);
+                if (checkbox) {
+                    checkbox.checked = selected;
+                    updateSelectedStore(storeName, storeUrl, selected);
+                }
+            });
+        }
+        function updateSelectedStore(storeName, storeUrl, isSelected) {
+            if (isSelected) {
+                if (!selectedStores.some(store => store[0] === storeName)) {
+                    selectedStores.push([storeName, storeUrl]);
+                }
+            } else {
+                selectedStores = selectedStores.filter(store => store[0] !== storeName);
+            }
+
+            updateSelectedStoresList();
+        }
+        function updateSelectedStoresList() {
+            const selectedStoresList = document.getElementById('selectedStoresList');
+            selectedStoresList.innerHTML = '';
+
+            if (selectedStores.length === 0) {
+                selectedStoresList.innerHTML = '<p>Магазины не выбраны</p>';
+                return;
+            }
+
+            selectedStores.forEach(store => {
+                const [storeName, storeUrl] = store;
+                const storeItem = document.createElement('div');
+                storeItem.className = 'store-item';
+                storeItem.textContent = `✓ ${storeName}`;
+                selectedStoresList.appendChild(storeItem);
+            });
+        }
+        function searchStores() {
+            const query = document.getElementById('storeSearch').value.trim().toLowerCase();
+            const searchType = document.querySelector('input[name="searchType"]:checked').value;
+            const searchResults = document.getElementById('searchResults');
+
+            if (!query) {
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            let foundStores = [];
+
+            if (searchType === 'all') {
+                for (const [category, storeList] of Object.entries(stores)) {
+                    storeList.forEach(store => {
+                        const [storeName, storeUrl] = store;
+                        if (storeName.toLowerCase().includes(query)) {
+                            foundStores.push({ category, storeName, storeUrl });
+                        }
+                    });
+                }
+            } else {
+                selectedStores.forEach(store => {
+                    const [storeName, storeUrl] = store;
+                    if (storeName.toLowerCase().includes(query)) {
+                        let category = 'Базовые магазины';
+                        for (const [cat, storeList] of Object.entries(stores)) {
+                            if (storeList.some(s => s[0] === storeName)) {
+                                category = cat;
+                                break;
+                            }
+                        }
+                        foundStores.push({ category, storeName, storeUrl });
+                    }
+                });
+            }
+
+            // Отображаем результаты
+            searchResults.innerHTML = '';
+            searchResults.classList.remove('hidden');
+
+            if (foundStores.length === 0) {
+                searchResults.innerHTML = '<p>Магазины не найдены</p>';
+                return;
+            }
+
+            const selectAllFound = document.createElement('label');
+            selectAllFound.innerHTML = '<input type="checkbox" id="selectAllFound"> Выбрать все найденные';
+            selectAllFound.querySelector('input').addEventListener('change', function () {
+                foundStores.forEach(store => {
+                    const checkbox = document.querySelector(`#store_${store.storeName}`);
+                    if (checkbox) {
+                        checkbox.checked = this.checked;
+                        updateSelectedStore(store.storeName, store.storeUrl, this.checked);
+                    }
+                });
+            });
+            searchResults.appendChild(selectAllFound);
+
+            foundStores.forEach(store => {
+                const storeItem = document.createElement('div');
+                storeItem.className = 'store-item';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `search_${store.storeName}`;
+                checkbox.checked = selectedStores.some(s => s[0] === store.storeName);
+                checkbox.addEventListener('change', function () {
+                    updateSelectedStore(store.storeName, store.storeUrl, this.checked);
+                });
+
+                const label = document.createElement('label');
+                label.htmlFor = `search_${store.storeName}`;
+                label.textContent = `${store.storeName} (${store.category})`;
+
+                storeItem.appendChild(checkbox);
+                storeItem.appendChild(label);
+                searchResults.appendChild(storeItem);
+            });
+        }
+
+        // Обработка загруженного файла
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    const headers = jsonData[0];
+                    const rows = jsonData.slice(1).map(row => {
+                        const obj = {};
+                        headers.forEach((header, i) => {
+                            obj[header] = row[i] !== undefined ? row[i] : null;
+                        });
+                        return obj;
+                    });
+
+                    processData(rows);
+
+                } catch (error) {
+                    console.error('Ошибка обработки файла:', error);
+                    alert('Ошибка при обработке файла. Убедитесь, что это корректный Excel файл.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Определение типа обоснования
+        function detectBaseAndType(obosnovanie) {
+            if (!obosnovanie) return { base: '', type: 'Неизвестно' };
+
+            const str = String(obosnovanie).trim();
+            if (str.startsWith("ГЭСНмр")) return { base: "gesnmr", type: "ГЭСНмр" };
+            if (str.startsWith("ГЭСНм")) return { base: "gesnm", type: "ГЭСНм" };
+            if (str.startsWith("ГЭСНп")) return { base: "gesnp", type: "ГЭСНп" };
+            if (str.startsWith("ГЭСНр")) return { base: "gesnr", type: "ГЭСНр" };
+            if (str.startsWith("ГЭСН")) return { base: "gesn", type: "ГЭСН" };
+            if (str.startsWith("ФЕРм")) return { base: "ferm", type: "ФЕРм" };
+            if (str.startsWith("ФЕРр")) return { base: "ferr", type: "ФЕРр" };
+            if (str.startsWith("ФЕРп")) return { base: "ferp", type: "ФЕРп" };
+            if (str.startsWith("ФЕР")) return { base: "fer", type: "ФЕР" };
+            if (str.startsWith("ФСБЦ")) return { base: "fsbcm", type: "ФСБЦ" };
+            if (str.startsWith("ФССЦ")) return { base: "fsscm", type: "ФССЦ" };
+            if (str.startsWith("ТЦ")) return { base: "tc", type: "ТЦ" };
+
+            return { base: '', type: 'Неизвестно' };
+        }
+        function getTCLinks(naimenovanie) {
+            if (!naimenovanie) return [];
+
+            const query = encodeURIComponent(naimenovanie);
+            return selectedStores.map(store => {
+                const [storeName, storeUrl] = store;
+                return storeUrl.replace('{query}', query);
+            });
+        }
+        function processData(data) {
+            const method = document.querySelector('input[name="method"]:checked').value;
+            const tcCoefficientBIM = parseFloat(document.getElementById('tcCoefficientBIM').value);
+            const generalCoefficient = parseFloat(document.getElementById('generalCoefficient').value);
+
+            results = [];
+            equipmentResults = [];
+            let current = null;
+            let positionNumber = 1;
+            let equipmentPositionNumber = 1;
+
+            if (method === 'РИМ (Ресурсно-индексный)') {
+                // Обработка для РИМ (без коэффициентов)
+                for (const row of data) {
+                    const obosnovanie = row['Обоснование'] ? String(row['Обоснование']).trim() : '';
+                    const naimenovanie = row['Наименование работ и затрат'] ? String(row['Наименование работ и затрат']).trim() : '';
+                    const totalCurrentPrice = row['всего в текущем уровне цен'] || 0;
+                    const poziciya = row['№ п/п'] ? String(row['№ п/п']).trim() : '';
+                    const isEquipment = poziciya && (poziciya.includes('О') || poziciya.includes('о')) && /\d/.test(poziciya);
+
+                    if (obosnovanie && (obosnovanie.startsWith("ГЭСН") || obosnovanie.startsWith("ФСБЦ") ||
+                        obosnovanie.startsWith("ФССЦ") || obosnovanie.startsWith("ТЦ") ||
+                        obosnovanie.startsWith("ФЕР"))) {
+
+                        if (current) {
+                            if (['ФСБЦ', 'ФССЦ', 'ТЦ'].includes(current['Тип'])) {
+                                current['Ссылки'] = getTCLinks(current['Наименование']);
+                            } else {
+                                current['Ссылки'] = [];
+                            }
+
+                            if (current['Категория'] === 'Оборудование') {
+                                equipmentResults.push(current);
+                            } else {
+                                results.push(current);
+                            }
+                        }
+
+                        const { base, type } = detectBaseAndType(obosnovanie);
+
+                        current = {
+                            '№ п/п': isEquipment ? equipmentPositionNumber : positionNumber,
+                            'Тип': type,
+                            'Обоснование': obosnovanie,
+                            'Наименование': naimenovanie,
+                            'Ед. измерения': row['Единица измерения'] || '',
+                            'Количество': row['на единицу измерения'] || 0,
+                            'Цена за ед.': row['на единицу измерения'] || 0,
+                            'Текущие цены': "",
+                            'М': 0,
+                            'ФОТ': 0,
+                            'Всего в текущем уровне цен': totalCurrentPrice,
+                            'Категория': isEquipment ? 'Оборудование' : 'Материалы/Работы'
+                        };
+
+                        if (isEquipment) {
+                            equipmentPositionNumber++;
+                        } else {
+                            positionNumber++;
+                        }
+                        continue;
+                    }
+
+                    if (current && current['Тип'] && current['Тип'].startsWith("ГЭСН")) {
+                        if (naimenovanie && naimenovanie.toUpperCase() === 'М') {
+                            current['М'] = totalCurrentPrice;
+                            continue;
+                        }
+                        if (naimenovanie && naimenovanie.toUpperCase() === 'ФОТ') {
+                            current['ФОТ'] = totalCurrentPrice;
+                            continue;
+                        }
+                        if (naimenovanie && naimenovanie.toUpperCase() === 'ВСЕГО ПО ПОЗИЦИИ') {
+                            current['Всего в текущем уровне цен'] = totalCurrentPrice;
+                            continue;
+                        }
+                    }
+                }
+
+                if (current) {
+                    if (['ФСБЦ', 'ФССЦ', 'ТЦ'].includes(current['Тип'])) {
+                        current['Ссылки'] = getTCLinks(current['Наименование']);
+                    } else {
+                        current['Ссылки'] = [];
+                    }
+
+                    if (current['Категория'] === 'Оборудование') {
+                        equipmentResults.push(current);
+                    } else {
+                        results.push(current);
+                    }
+                }
+                results.forEach(row => {
+                    if (row['Тип'].startsWith("ГЭСН")) {
+                        row['Сметная цена'] = row['ФОТ'] || 0;
+                    } else {
+                        row['Сметная цена'] = row['Всего в текущем уровне цен'] || 0;
+                    }
+                    row['Количество'] = row['Количество'] || 0;
+                });
+
+                if (equipmentResults.length > 0) {
+                    equipmentResults.forEach(row => {
+                        row['Сметная цена'] = row['Всего в текущем уровне цен'] || 0;
+                        row['Количество'] = row['Количество'] || 0;
+                    });
+                }
+
+            } else {
+                // Обработка для БИМ (с коэффициентами)
+                let currentWork = null;
+                const fotValues = {};
+                const mValues = {};
+
+                // Собираем все значения ФОТ и М
+                for (const row of data) {
+                    const obosnovanie = row['Обоснование'] ? String(row['Обоснование']).trim() : '';
+                    const naimenovanie = row['Наименование работ и затрат'] ? String(row['Наименование работ и затрат']).trim() : '';
+
+                    if (obosnovanie && (obosnovanie.startsWith("ГЭСН") || obosnovanie.startsWith("ФЕР"))) {
+                        currentWork = obosnovanie;
+                        fotValues[currentWork] = 0;
+                        mValues[currentWork] = 0;
+                    }
+
+                    if (currentWork) {
+                        if (naimenovanie && naimenovanie.toUpperCase() === 'ФОТ') {
+                            const fotValue = row['Сметная стоимость в текущем уровне цен, руб.'] || 0;
+                            fotValues[currentWork] = fotValue;
+                        }
+
+                        if (naimenovanie && naimenovanie.toUpperCase() === 'М') {
+                            const mValue = row['всего(сметная стоимость)'] || 0;
+                            mValues[currentWork] = mValue;
+                        }
+                    }
+                }
+                for (const row of data) {
+                    const obosnovanie = row['Обоснование'] ? String(row['Обоснование']).trim() : '';
+                    const naimenovanie = row['Наименование работ и затрат'] ? String(row['Наименование работ и затрат']).trim() : '';
+                    const poziciya = row['№ п/п'] ? String(row['№ п/п']).trim() : '';
+                    const isEquipment = poziciya && (poziciya.includes('О') || poziciya.includes('о')) && /\d/.test(poziciya);
+                    const isWork = obosnovanie && (obosnovanie.startsWith("ГЭСН") || obosnovanie.startsWith("ФЕР"));
+                    const isMaterial = obosnovanie && (obosnovanie.startsWith("ФСБЦ") || obosnovanie.startsWith("ФССЦ") || obosnovanie.startsWith("ТЦ"));
+
+                    if (isWork || isMaterial) {
+                        if (current) {
+                            if (['ФСБЦ', 'ФССЦ', 'ТЦ'].includes(current['Тип'])) {
+                                current['Ссылки'] = getTCLinks(current['Наименование']);
+                            } else {
+                                current['Ссылки'] = [];
+                            }
+
+                            if (current['Категория'] === 'Оборудование') {
+                                equipmentResults.push(current);
+                            } else {
+                                results.push(current);
+                            }
+                        }
+                        const { base, type } = detectBaseAndType(obosnovanie);
+                        const kolichestvo = row['всего с учетом коэффициентов(количество)'] || 0;
+                        let smetnayaStoimost = 0;
+                        let itemType = "";
+                        let mValue = 0;
+
+                        if (isWork) {
+                            smetnayaStoimost = fotValues[obosnovanie] || 0;
+                            itemType = "Работы";
+                            mValue = mValues[obosnovanie] || 0;
+                        } else {
+                            smetnayaStoimost = row['всего(сметная стоимость)'] || 0;
+                            if (obosnovanie.startsWith("ТЦ")) {
+                                smetnayaStoimost *= tcCoefficientBIM;
+                            } else {
+                                smetnayaStoimost *= generalCoefficient;
+                            }
+
+                            itemType = "Материалы";
+                            mValue = 0;
+                        }
+
+                        current = {
+                            '№ п/п': isEquipment ? equipmentPositionNumber : positionNumber,
+                            'Тип': type,
+                            'Обоснование': obosnovanie,
+                            'Наименование': naimenovanie,
+                            'Ед. измерения': row['Единица измерения'] || '',
+                            'Количество': kolichestvo,
+                            'Сметная цена': smetnayaStoimost,
+                            'Текущие цены': "",
+                            'Категория': isEquipment ? 'Оборудование' : itemType,
+                            'М': mValue
+                        };
+
+                        if (isEquipment) {
+                            equipmentPositionNumber++;
+                        } else {
+                            positionNumber++;
+                        }
+                        continue;
+                    }
+                }
+
+                if (current) {
+                    if (['ФСБЦ', 'ФССЦ', 'ТЦ'].includes(current['Тип'])) {
+                        current['Ссылки'] = getTCLinks(current['Наименование']);
+                    } else {
+                        current['Ссылки'] = [];
+                    }
+
+                    if (current['Категория'] === 'Оборудование') {
+                        equipmentResults.push(current);
+                    } else {
+                        results.push(current);
+                    }
+                }
+                results.forEach(row => {
+                    row['Количество'] = row['Количество'] || 0;
+                });
+
+                if (equipmentResults.length > 0) {
+                    equipmentResults.forEach(row => {
+                        row['Количество'] = row['Количество'] || 0;
+                    });
+                }
+            }
+
+            processedData = { results, equipmentResults };
+            displayResults();
+        }
+
+        function displayResults() {
+    const resultsSection = document.getElementById('resultsSection');
+    resultsSection.classList.remove('hidden');
+
+    displayMaterialsResults();
+    displayEquipmentResults();
+    document.getElementById('downloadSection').classList.remove('hidden');
+
+    // вот эта строка нужна
+    showInsertButton();
+}
+function showInsertButton() {
+  const btn = document.getElementById("openInsertModal");
+  if (btn) btn.style.display = "inline-block";
+}
+
+        // Отображение результатов по материалам и работам
+        function displayMaterialsResults() {
+            const materialsResults = document.getElementById('materialsResults');
+            materialsResults.innerHTML = '';
+
+            if (processedData.results.length === 0) {
+                materialsResults.innerHTML = '<p>Нет данных для отображения</p>';
+                return;
+            }
+
+            processedData.results.forEach(row => {
+                const itemBlock = document.createElement('div');
+                itemBlock.className = 'item-block';
+
+                const itemHeader = document.createElement('div');
+                itemHeader.className = 'item-header';
+                itemHeader.innerHTML = `
+                    <div>${row['№ п/п']}. ${row['Наименование']} (${row['Тип']})</div>
+                    <div>${row['Сметная цена']} руб.</div>
+                `;
+
+                const itemDetails = document.createElement('div');
+                itemDetails.className = 'item-details';
+                itemDetails.innerHTML = `
+                    <p><b>Обоснование:</b> ${row['Обоснование']}</p>
+                    <p><b>Ед. измерения:</b> ${row['Ед. измерения']}</p>
+                    <p><b>Количество:</b> ${row['Количество']}</p>
+                    <p><b>Сметная цена:</b> ${row['Сметная цена']}</p>
+                `;
+
+                const method = document.querySelector('input[name="method"]:checked').value;
+                if (method === 'БИМ (Базисно-индексный)' && row['Тип'].startsWith("ТЦ")) {
+                    const tcCoefficient = parseFloat(document.getElementById('tcCoefficientBIM').value);
+                    itemDetails.innerHTML += `<p><b>Применен коэффициент ТЦ:</b> ${tcCoefficient}</p>`;
+                }
+
+                if (row['Категория']) {
+                    itemDetails.innerHTML += `<p><b>Категория:</b> ${row['Категория']}</p>`;
+                }
+
+                if (row['Ссылки'] && row['Ссылки'].length > 0) {
+                    itemDetails.innerHTML += `<p><b>Поиск товаров в магазинах:</b></p>`;
+                    const linksContainer = document.createElement('div');
+                    linksContainer.className = 'store-links';
+
+                    row['Ссылки'].forEach((link, index) => {
+                        if (index < selectedStores.length) {
+                            const storeName = selectedStores[index][0];
+                            const storeLink = document.createElement('a');
+                            storeLink.href = link;
+                            storeLink.target = '_blank';
+                            storeLink.className = 'store-link';
+                            storeLink.textContent = storeName;
+                            linksContainer.appendChild(storeLink);
+                        }
+                    });
+
+                    itemDetails.appendChild(linksContainer);
+                } else {
+                    itemDetails.innerHTML += `<p>Нет ссылок для поиска товаров</p>`;
+                }
+
+                itemBlock.appendChild(itemHeader);
+                itemBlock.appendChild(itemDetails);
+
+                itemHeader.addEventListener('click', function () {
+                    itemDetails.classList.toggle('active');
+                });
+
+                materialsResults.appendChild(itemBlock);
+            });
+        }
+
+        // Отображение результатов по оборудованию
+        function displayEquipmentResults() {
+            const equipmentResults = document.getElementById('equipmentResults');
+            equipmentResults.innerHTML = '';
+
+            if (!processedData.equipmentResults || processedData.equipmentResults.length === 0) {
+                equipmentResults.innerHTML = '<p>Оборудование не найдено</p>';
+                return;
+            }
+
+            processedData.equipmentResults.forEach(row => {
+                const itemBlock = document.createElement('div');
+                itemBlock.className = 'item-block';
+
+                const itemHeader = document.createElement('div');
+                itemHeader.className = 'item-header';
+                itemHeader.innerHTML = `
+                    <div>${row['№ п/п']}. ${row['Наименование']} (${row['Тип']})</div>
+                    <div>${row['Сметная цена']} руб.</div>
+                `;
+
+                const itemDetails = document.createElement('div');
+                itemDetails.className = 'item-details';
+                itemDetails.innerHTML = `
+                    <p><b>Обоснование:</b> ${row['Обоснование']}</p>
+                    <p><b>Ед. измерения:</b> ${row['Ед. измерения']}</p>
+                    <p><b>Количество:</b> ${row['Количество']}</p>
+                    <p><b>Сметная цена:</b> ${row['Сметная цена']}</p>
+                `;
+
+                if (row['Категория']) {
+                    itemDetails.innerHTML += `<p><b>Категория:</b> ${row['Категория']}</p>`;
+                }
+
+                if (row['Ссылки'] && row['Ссылки'].length > 0) {
+                    itemDetails.innerHTML += `<p><b>Поиск товаров в магазинах:</b></p>`;
+                    const linksContainer = document.createElement('div');
+                    linksContainer.className = 'store-links';
+
+                    row['Ссылки'].forEach((link, index) => {
+                        if (index < selectedStores.length) {
+                            const storeName = selectedStores[index][0];
+                            const storeLink = document.createElement('a');
+                            storeLink.href = link;
+                            storeLink.target = '_blank';
+                            storeLink.className = 'store-link';
+                            storeLink.textContent = storeName;
+                            linksContainer.appendChild(storeLink);
+                        }
+                    });
+
+                    itemDetails.appendChild(linksContainer);
+                } else {
+                    itemDetails.innerHTML += `<p>Нет ссылок для поиска товаров</p>`;
+                }
+
+                itemBlock.appendChild(itemHeader);
+                itemBlock.appendChild(itemDetails);
+
+                itemHeader.addEventListener('click', function () {
+                    itemDetails.classList.toggle('active');
+                });
+
+                equipmentResults.appendChild(itemBlock);
+            });
+        }
+
+        // Переключение вкладок
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+        }
+
+        // Создание гиперссылки для Excel
+        function createHyperlink(url, text) {
+            return {
+                l: { Target: url },
+                v: text || url,
+                t: 's'
+            };
+        }
+
+        // Скачивание Excel файла
+        function downloadExcel() {
+            const fileName = document.getElementById('fileName').value.trim();
+
+            if (!fileName) {
+                document.getElementById('downloadWarning').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('downloadWarning').classList.add('hidden');
+
+            const method = document.querySelector('input[name="method"]:checked').value;
+            const finalFileName = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`;
+
+            try {
+                const wb = XLSX.utils.book_new();
+
+                if (method === 'РИМ (Ресурсно-индексный)') {
+                    const df_gesn = processedData.results.filter(row => row['Тип'].startsWith("ГЭСН"));
+                    const ws_gesn_data = df_gesn.map(row => ({
+                        '№ п/п': row['№ п/п'],
+                        'Тип': row['Тип'],
+                        'Обоснование': row['Обоснование'],
+                        'Наименование': row['Наименование'],
+                        'Ед. измерения': row['Ед. измерения'],
+                        'Количество': row['Количество'],
+                        'Сметная цена': row['Сметная цена'],
+                        'Текущие цены': row['Текущие цены']
+                    }));
+
+                    const ws_gesn = XLSX.utils.json_to_sheet(ws_gesn_data);
+                    XLSX.utils.book_append_sheet(wb, ws_gesn, 'Работы');
+                    const df_other = processedData.results.filter(row => !row['Тип'].startsWith("ГЭСН"));
+                    const otherData = [];
+
+                    df_other.forEach(row => {
+                        const rowData = {
+                            '№ п/п': row['№ п/п'],
+                            'Тип': row['Тип'],
+                            'Обоснование': row['Обоснование'],
+                            'Наименование': row['Наименование'],
+                            'Ед. измерения': row['Ед. измерения'],
+                            'Количество': row['Количество'],
+                            'Сметная цена': row['Сметная цена'],
+                            'Текущие цены': row['Текущие цены']
+                        };
+
+                        otherData.push(rowData);
+                    });
+                    const ws_other = XLSX.utils.json_to_sheet(otherData);
+                    if (df_other.length > 0) {
+                        const range = XLSX.utils.decode_range(ws_other['!ref']);
+                        selectedStores.forEach((store, index) => {
+                            const storeName = store[0];
+                            const colIndex = range.e.c + 1 + index;
+                            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+                            ws_other[cellAddress] = { v: storeName, t: 's' };
+                        });
+                        df_other.forEach((row, rowIndex) => {
+                            if (row['Ссылки'] && row['Ссылки'].length > 0) {
+                                row['Ссылки'].forEach((link, linkIndex) => {
+                                    if (linkIndex < selectedStores.length) {
+                                        const colIndex = range.e.c + 1 + linkIndex;
+                                        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
+                                        ws_other[cellAddress] = {
+                                            l: { Target: link },
+                                            v: selectedStores[linkIndex][0],
+                                            t: 's'
+                                        };
+                                    }
+                                });
+                            }
+                        });
+                        const newRange = XLSX.utils.encode_range({
+                            s: { r: 0, c: 0 },
+                            e: { r: range.e.r, c: range.e.c + selectedStores.length }
+                        });
+                        ws_other['!ref'] = newRange;
+                    }
+
+                    XLSX.utils.book_append_sheet(wb, ws_other, 'Материалы');
+                    const gesn_sum_m = processedData.results
+                        .filter(row => row['Тип'].startsWith("ГЭСН"))
+                        .reduce((sum, row) => sum + (row['М'] || 0), 0);
+
+                    XLSX.utils.sheet_add_aoa(ws_other, [
+                        [],
+                        ['', '', '', '', '', 'Итого М', gesn_sum_m]
+                    ], { origin: -1 });
+
+                } else {
+                    const df_works = processedData.results.filter(row => row['Категория'] === 'Работы');
+                    const ws_works = XLSX.utils.json_to_sheet(df_works.map(row => ({
+                        '№ п/п': row['№ п/п'],
+                        'Тип': row['Тип'],
+                        'Обоснование': row['Обоснование'],
+                        'Наименование': row['Наименование'],
+                        'Ед. измерения': row['Ед. измерения'],
+                        'Количество': row['Количество'],
+                        'Сметная цена': row['Сметная цена'],
+                        'Текущие цены': row['Текущие цены']
+                    })));
+                    XLSX.utils.book_append_sheet(wb, ws_works, 'Работы');
+
+                    // Для БИМ - Материалы с гиперссылками
+                    const df_materials = processedData.results.filter(row => row['Категория'] === 'Материалы');
+                    const materialsData = [];
+
+                    df_materials.forEach(row => {
+                        const rowData = {
+                            '№ п/п': row['№ п/п'],
+                            'Тип': row['Тип'],
+                            'Обоснование': row['Обоснование'],
+                            'Наименование': row['Наименование'],
+                            'Ед. измерения': row['Ед. измерения'],
+                            'Количество': row['Количество'],
+                            'Сметная цена': row['Сметная цена'],
+                            'Текущие цены': row['Текущие цены']
+                        };
+
+                        materialsData.push(rowData);
+                    });
+
+                    const ws_materials = XLSX.utils.json_to_sheet(materialsData);
+                    if (df_materials.length > 0) {
+                        const range = XLSX.utils.decode_range(ws_materials['!ref']);
+                        selectedStores.forEach((store, index) => {
+                            const storeName = store[0];
+                            const colIndex = range.e.c + 1 + index;
+                            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+                            ws_materials[cellAddress] = { v: storeName, t: 's' };
+                        });
+                        df_materials.forEach((row, rowIndex) => {
+                            if (row['Ссылки'] && row['Ссылки'].length > 0) {
+                                row['Ссылки'].forEach((link, linkIndex) => {
+                                    if (linkIndex < selectedStores.length) {
+                                        const colIndex = range.e.c + 1 + linkIndex;
+                                        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
+                                        ws_materials[cellAddress] = {
+                                            l: { Target: link },
+                                            v: selectedStores[linkIndex][0],
+                                            t: 's'
+                                        };
+                                    }
+                                });
+                            }
+                        });
+                        const newRange = XLSX.utils.encode_range({
+                            s: { r: 0, c: 0 },
+                            e: { r: range.e.r, c: range.e.c + selectedStores.length }
+                        });
+                        ws_materials['!ref'] = newRange;
+                    }
+
+                    XLSX.utils.book_append_sheet(wb, ws_materials, 'Материалы');
+                    const bim_sum_m = processedData.results
+                        .filter(row => row['Категория'] === 'Работы')
+                        .reduce((sum, row) => sum + (row['М'] || 0), 0);
+
+                    XLSX.utils.sheet_add_aoa(ws_materials, [
+                        [],
+                        ['', '', '', '', '', 'Итого М', bim_sum_m]
+                    ], { origin: -1 });
+                }
+                if (processedData.equipmentResults && processedData.equipmentResults.length > 0) {
+                    const equipmentData = [];
+
+                    processedData.equipmentResults.forEach(row => {
+                        const rowData = {
+                            '№ п/п': row['№ п/п'],
+                            'Тип': row['Тип'],
+                            'Обоснование': row['Обоснование'],
+                            'Наименование': row['Наименование'],
+                            'Ед. измерения': row['Ед. измерения'],
+                            'Количество': row['Количество'],
+                            'Сметная цена': row['Сметная цена'],
+                            'Текущие цены': row['Текущие цены']
+                        };
+
+                        equipmentData.push(rowData);
+                    });
+
+                    const ws_equipment = XLSX.utils.json_to_sheet(equipmentData);
+                    if (processedData.equipmentResults.length > 0) {
+                        const range = XLSX.utils.decode_range(ws_equipment['!ref']);
+                        selectedStores.forEach((store, index) => {
+                            const storeName = store[0];
+                            const colIndex = range.e.c + 1 + index;
+                            const cellAddress = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+                            ws_equipment[cellAddress] = { v: storeName, t: 's' };
+                        });
+                        processedData.equipmentResults.forEach((row, rowIndex) => {
+                            if (row['Ссылки'] && row['Ссылки'].length > 0) {
+                                row['Ссылки'].forEach((link, linkIndex) => {
+                                    if (linkIndex < selectedStores.length) {
+                                        const colIndex = range.e.c + 1 + linkIndex;
+                                        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
+                                        ws_equipment[cellAddress] = {
+                                            l: { Target: link },
+                                            v: selectedStores[linkIndex][0],
+                                            t: 's'
+                                        };
+                                    }
+                                });
+                            }
+                        });
+                        const newRange = XLSX.utils.encode_range({
+                            s: { r: 0, c: 0 },
+                            e: { r: range.e.r, c: range.e.c + selectedStores.length }
+                        });
+                        ws_equipment['!ref'] = newRange;
+                    }
+
+                    XLSX.utils.book_append_sheet(wb, ws_equipment, 'Оборудование');
+                }
+
+                // Сохраняем файл
+                XLSX.writeFile(wb, finalFileName);
+                const successMessage = document.createElement('div');
+                successMessage.className = 'success-message';
+                successMessage.textContent = `Файл "${finalFileName}" успешно скачан!`;
+                document.getElementById('downloadSection').appendChild(successMessage);
+                setTimeout(() => {
+                    successMessage.remove();
+                }, 3000);
+
+            } catch (error) {
+                console.error('Ошибка при создании Excel файла:', error);
+                alert('Произошла ошибка при создании файла. Попробуйте еще раз.');
+            }
+        }
+const insertModal = document.getElementById("insertModal");
+const openInsertBtn = document.getElementById("openInsertModal");
+const insertList = document.getElementById("insertList");
+const textarea = document.getElementById("input");
+const searchInput = document.getElementById("insertSearchInput");
+
+// Открыть модалку
+openInsertBtn.addEventListener("click", () => {
+  insertModal.style.display = "block";
+  buildInsertList();
+});
+
+// Закрыть модалку
+function closeInsertModal() {
+  insertModal.style.display = "none";
+}
+
+// Построение списка всех элементов
+function buildInsertList() {
+  insertList.innerHTML = "";
+  if (!processedData) {
+    insertList.innerHTML = "<p style='color:#999;'>Нет данных</p>";
+    return;
+  }
+
+  const items = [...processedData.results, ...(processedData.equipmentResults || [])];
+
+  items.forEach((row, idx) => {
+    const div = document.createElement("div");
+    div.className = "insert-item";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `item-${idx}`;
+    checkbox.dataset.text = `${row["№ п/п"] || idx + 1}. ${row["Наименование"]} (${row["Категория"] || row["Тип"]})`;
+
+    const label = document.createElement("label");
+    label.htmlFor = checkbox.id;
+    label.textContent = checkbox.dataset.text;
+
+    div.appendChild(checkbox);
+    div.appendChild(label);
+    insertList.appendChild(div);
+  });
+}
+
+// Поиск
+searchInput.addEventListener("input", () => {
+  const term = searchInput.value.toLowerCase();
+  Array.from(insertList.children).forEach(item => {
+    const label = item.querySelector("label");
+    item.style.display = label.textContent.toLowerCase().includes(term) ? "" : "none";
+  });
+});
+
+// Вставить все элементы
+function insertAllItems() {
+  const items = insertList.querySelectorAll("input[type=checkbox]");
+  if (!items.length) {
+    alert("Нет данных для вставки!");
+    return;
+  }
+  const text = Array.from(items).map(cb => cb.dataset.text).join("\n");
+  textarea.value += (textarea.value ? "\n\n" : "") + text;
+  textarea.dispatchEvent(new Event("input"));
+  closeInsertModal();
+}
+
+// Вставить только выбранные
+function insertSelectedItems() {
+  const items = insertList.querySelectorAll("input[type=checkbox]:checked");
+  if (!items.length) {
+    alert("Выберите элементы для вставки!");
+    return;
+  }
+  const text = Array.from(items).map(cb => cb.dataset.text).join("\n");
+  textarea.value += (textarea.value ? "\n\n" : "") + text;
+  textarea.dispatchEvent(new Event("input"));
+  closeInsertModal();
+}
+    </script>
+<script>
+    const openModalBtn = document.getElementById('open-excel-modal');
+const modal = document.getElementById('excel-modal');
+const closeModalBtn = document.getElementById('close-excel-modal');
+const fileInput = document.getElementById('excel-file-input');
+const tableContainer = document.getElementById('excel-table-container');
+
+// Открытие/закрытие модалки
+openModalBtn.addEventListener('click', () => modal.style.display = 'block');
+closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+window.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+const sheetTabs = document.getElementById('sheet-tabs');
+const copyBtn = document.getElementById('copy-table-btn');
+
+let workbookGlobal = null; // сохраняем рабочую книгу
+let currentSheetName = null;
+
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        const data = new Uint8Array(evt.target.result);
+        workbookGlobal = XLSX.read(data, { type: 'array' });
+        
+        // Создаем вкладки листов
+        sheetTabs.innerHTML = '';
+        workbookGlobal.SheetNames.forEach((name, idx) => {
+            const btn = document.createElement('button');
+            btn.textContent = name;
+            btn.style.padding = '5px 10px';
+            btn.style.cursor = 'pointer';
+            btn.addEventListener('click', () => showSheet(name));
+            sheetTabs.appendChild(btn);
+            if(idx === 0) showSheet(name); // показываем первый лист по умолчанию
+        });
+    };
+    reader.readAsArrayBuffer(file);
+});
+
+function showSheet(sheetName) {
+    currentSheetName = sheetName;
+    const worksheet = workbookGlobal.Sheets[sheetName];
+    const html = XLSX.utils.sheet_to_html(worksheet);
+    tableContainer.innerHTML = html;
+
+    // Применяем стили твоих таблиц
+    tableContainer.querySelectorAll('table').forEach(t => t.classList.add('gpt-table'));
+}
+
+// Копирование таблицы
+copyBtn.addEventListener('click', () => {
+    const table = tableContainer.querySelector('table');
+    if (!table) return;
+
+    // Создаем временный элемент textarea для копирования
+    const textarea = document.createElement('textarea');
+    textarea.value = table.innerText; 
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    alert('Таблица скопирована в буфер обмена!');
+});
+
+
+        function showFullHistoryInChat() {
+            fetch('/full_history?limit=200')
+                .then(res => res.json())
+                .then(data => {
+                    messages.innerHTML = '';
+                    let i = 0;
+
+                    function renderChunk() {
+                        const chunk = data.slice(i, i + 20);
+                        chunk.forEach(item => {
+                            const role = item.role || 'assistant';
+                            const content = item.content || '';
+                            if (role === 'user') appendMessage('user', content);
+                            else if (role === 'assistant') appendMessage('gpt', content);
+                            else if (role === 'error') appendMessage('error', content);
+                            else appendMessage('gpt', content);
+                        });
+                        i += 20;
+                        if (i < data.length) {
+                            setTimeout(renderChunk, 50);
+                        } else {
+                            messages.scrollTop = messages.scrollHeight;
+                        }
+                    }
+
+                    renderChunk();
+                })
+                .catch(err => {
+                    console.error(err);
+                    appendMessage('error', 'Не удалось загрузить историю: ' + err.message);
+                });
+        }
+        let isHistoryOpen = false;
+        let currentSmetaItems = [];
+        let editingPriceId = null;
+
+        const messages = document.getElementById("messages");
+        const input = document.getElementById("input");
+        const pricesStatus = document.getElementById("prices-status");
+        const pricesModal = document.getElementById("prices-modal");
+        const smetaModal = document.getElementById("smeta-modal");
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+        function toggleHistory() {
+            const historyPanel = document.getElementById('history-panel');
+            const toggleButton = document.getElementById('history-toggle');
+            isHistoryOpen = !isHistoryOpen;
+            if (isHistoryOpen) {
+                historyPanel.classList.add('history-open');
+                toggleButton.textContent = '✕ Закрыть историю';
+                loadHistory();
+            } else {
+                historyPanel.classList.remove('history-open');
+                toggleButton.textContent = 'История запросов';
+            }
+        }
+
+        function appendMessage(type, text) {
+            const div = document.createElement("div");
+            div.className = `message ${type}`;
+
+            if (type === 'gpt') {
+                const tableRegex = /((?:\|.+\|\n)+\|.+\|)/g;
+                let lastIndex = 0;
+                let match;
+                while ((match = tableRegex.exec(text)) !== null) {
+                    const idx = match.index;
+                    if (idx > lastIndex) {
+                        const preText = text.slice(lastIndex, idx).trim();
+                        if (preText) {
+                            const p = document.createElement('div');
+                            p.textContent = "GPT: " + preText;
+                            div.appendChild(p);
+                        }
+                    }
+                    const tableHTML = convertMarkdownTableToHTML(match[0]);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = tableHTML;
+                    div.appendChild(tempDiv.firstChild);
+
+                    lastIndex = idx + match[0].length;
+                }
+                const restText = text.slice(lastIndex).trim();
+                if (restText) {
+                    const p = document.createElement('div');
+                    p.textContent = restText;
+                    div.appendChild(p);
+                }
+                postProcessTablesInDiv(div).catch(err => console.error('postProcessTablesInDiv:', err));
+
+            } else {
+                div.textContent = (type === 'user' ? "Вы: " : type === 'error' ? "Ошибка: " : "GPT: ") + text;
+            }
+
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+        function convertMarkdownTableToHTML(markdown) {
+            const lines = markdown.trim().split('\n');
+            let html = '<table class="gpt-table"><thead>';
+            let inHeader = true;
+            let tbodyStarted = false;
+
+            lines.forEach(line => {
+                if (!line.trim().startsWith('|')) return;
+                const cells = line.trim().split('|').slice(1, -1).map(c => c.trim());
+                if (cells.length === 0) return;
+
+                if (cells.every(c => /^-+$/.test(c))) {
+                    inHeader = false;
+                    html += '</tr></thead><tbody>';
+                    tbodyStarted = true;
+                } else {
+                    html += inHeader ? '<tr>' : '<tr>';
+                    cells.forEach(cell => {
+                        html += inHeader ? `<th>${escapeHtml(cell)}</th>` : `<td>${escapeHtml(cell)}</td>`;
+                    });
+                    html += '</tr>';
+                }
+            });
+
+            if (!tbodyStarted) html += '</thead><tbody>';
+            html += '</tbody></table>';
+            return html;
+        }
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function copyTableToClipboard(table) {
+            try {
+                const range = document.createRange();
+                range.selectNode(table);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                alert('Таблица скопирована в буфер обмена!');
+            } catch (err) {
+                console.error('Ошибка копирования таблицы:', err);
+                alert('Ошибка копирования таблицы');
+            }
+        }
+
+        function copyColumnToClipboard(table, columnIndex) {
+            try {
+                let columnText = '';
+                for (let i = 0; i < table.rows.length; i++) {
+                    if (table.rows[i].cells[columnIndex]) {
+                        columnText += table.rows[i].cells[columnIndex].textContent.trim() + '\n';
+                    }
+                }
+                navigator.clipboard.writeText(columnText.trim())
+                    .then(() => alert('Столбец скопирован в буфер обмена!'))
+                    .catch(err => { console.error('Ошибка копирования:', err); alert('Ошибка копирования'); });
+            } catch (err) {
+                console.error('Ошибка копирования столбца:', err);
+                alert('Ошибка при копировании столбца');
+            }
+        }
+
+        function exportTableToExcel(table, filename = 'table.xlsx') {
+            try {
+                const controls = table.previousSibling && table.previousSibling.classList && table.previousSibling.classList.contains('table-controls') ? table.previousSibling : null;
+                if (controls) controls.style.display = 'none';
+
+                const ws = XLSX.utils.table_to_sheet(table);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+                XLSX.writeFile(wb, filename);
+
+                if (controls) controls.style.display = '';
+            } catch (err) {
+                console.error('Ошибка экспорта в XLSX:', err);
+                alert('Ошибка при экспорте XLSX: ' + (err.message || err));
+            }
+        }
+
+        function openPricesModal() {
+            pricesModal.style.display = 'block';
+            loadPricesTable();
+        }
+        function closePricesModal() {
+            pricesModal.style.display = 'none';
+            clearPriceForm();
+        }
+        function openSmetaModal() {
+            smetaModal.style.display = 'block';
+            loadSmetaTable();
+        }
+        function closeSmetaModal() {
+            smetaModal.style.display = 'none';
+            clearSmetaForm();
+        }
+        function loadPricesTable() {
+            fetch('/get_prices')
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка загрузки цен');
+                    return response.json();
+                })
+                .then(prices => {
+                    console.log('Загружены цены:', prices);
+                    const tbody = document.getElementById('prices-table-body');
+                    tbody.innerHTML = '';
+
+                    if (!prices || prices.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Нет данных о ценах</td></tr>';
+                        return;
+                    }
+
+                    prices.sort((a, b) => (Number(a.номер) || 0) - (Number(b.номер) || 0)).forEach(price => {
+                        const row = document.createElement('tr');
+
+                        row.innerHTML = `
+                    <td>${price.номер}</td>
+                    <td>${escapeHtml(price.наименование || '')}</td>
+                    <td>${escapeHtml(price.единица || '')}</td>
+                    <td>${price.цена_голден || ''}</td>
+                    <td>${price.цена_уткур || ''}</td>
+                    <td></td>
+                `;
+
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'prices-btn';
+                        editBtn.textContent = 'Изменить';
+                        editBtn.addEventListener('click', () => editPrice(
+                            price.номер,
+                            price.наименование || '',
+                            price.единица || 'м2',
+                            price.цена_голден || '',
+                            price.цена_уткур || ''
+                        ));
+
+                        const delBtn = document.createElement('button');
+                        delBtn.className = 'clear-btn';
+                        delBtn.textContent = 'Удалить';
+                        delBtn.addEventListener('click', () => deletePrice(price.номер));
+
+                        const actionsCell = row.querySelector('td:last-child');
+                        actionsCell.appendChild(editBtn);
+                        actionsCell.appendChild(delBtn);
+
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(err => {
+                    console.error('Ошибка загрузки цен:', err);
+                    const tbody = document.getElementById('prices-table-body');
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Ошибка загрузки цен</td></tr>';
+                });
+        }
+        function editPrice(number, name, unit, golden, utkur) {
+            document.getElementById('price-number').value = number;
+            document.getElementById('price-name').value = name;
+            document.getElementById('price-unit').value = unit;
+            document.getElementById('price-golden').value = golden;
+            document.getElementById('price-utkur').value = utkur;
+            editingPriceId = number;
+            openPricesModal();
+        }
+        function clearPriceForm() {
+            document.getElementById('price-number').value = '';
+            document.getElementById('price-name').value = '';
+            document.getElementById('price-unit').value = 'м2';
+            document.getElementById('price-golden').value = '';
+            document.getElementById('price-utkur').value = '';
+            editingPriceId = null;
+        }
+        function savePrice() {
+            const number = parseInt(document.getElementById('price-number').value);
+            const name = document.getElementById('price-name').value.trim();
+            const unit = document.getElementById('price-unit').value.trim();
+            const golden = document.getElementById('price-golden').value.trim();
+            const utkur = document.getElementById('price-utkur').value.trim();
+
+            if (!number || !name || !unit) {
+                alert('Заполните обязательные поля: Номер, Наименование, Единица');
+                return;
+            }
+
+            const priceData = {
+                номер: number,
+                наименование: name,
+                единица: unit,
+                цена_голден: golden || null,
+                цена_уткур: utkur || null
+            };
+
+            fetch('/update_price', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(priceData)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        alert(data.message);
+                        loadPricesTable();
+                        clearPriceForm();
+                        checkPricesStatus();
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                    }
+                })
+                .catch(err => {
+                    console.error('Ошибка сохранения цены:', err);
+                    alert('Ошибка сохранения цены');
+                });
+        }
+        function deletePrice(priceId) {
+            if (!confirm('Вы уверены, что хотите удалить эту расценку?')) return;
+            fetch(`/delete_price/${priceId}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        alert(data.message);
+                        loadPricesTable();
+                        checkPricesStatus();
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                    }
+                })
+                .catch(err => {
+                    console.error('Ошибка удаления цены:', err);
+                    alert('Ошибка удаления цены');
+                });
+        }
+
+        function sendMessage() {
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            appendMessage('user', prompt);
+            input.value = '';
+
+            const payload = {
+                prompt: prompt,
+                history: getChatHistory(),
+                smeta_items: currentSmetaItems
+            };
+
+            appendMessage('loading', 'GPT формирует ответ...');
+
+            fetch('/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    document.querySelectorAll('.loading').forEach(el => el.remove());
+                    if (data.response) {
+                        appendMessage('gpt', data.response);
+                        loadHistory();
+                    } else if (data.error) {
+                        appendMessage('error', data.error);
+                    }
+                })
+                .catch(err => {
+                    document.querySelectorAll('.loading').forEach(el => el.remove());
+                    appendMessage('error', 'Ошибка отправки: ' + err);
+                    console.error(err);
+                });
+        }
+
+        function getChatHistory() {
+            const msgs = [];
+            messages.querySelectorAll('.message').forEach(div => {
+                if (div.classList.contains('user')) {
+                    msgs.push({ role: 'user', content: div.textContent.replace(/^Вы: /, '') });
+                } else if (div.classList.contains('gpt') && !div.classList.contains('loading')) {
+                    msgs.push({ role: 'assistant', content: div.textContent.replace(/^GPT: /, '') });
+                }
+            });
+            return msgs;
+        }
+
+        function handleFile(inputFile) {
+            const file = inputFile.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: "" });
+
+                currentSmetaItems = jsonData.map(row => {
+                    const name = row["Наименование"] || row["наименование"] || row["Наименование работ"] || row["Работа"] || "";
+                    const qtyVal = row["Количество"] || row["количество"] || row["Кол-во"] || row["кол-во"] || 1;
+                    const qty = isNaN(qtyVal) ? 1 : Number(qtyVal);
+                    const unit = row["Ед. изм."] || row["ед. изм."] || row["Единица"] || row["единица"] || "шт";
+
+                    return {
+                        наименование: name,
+                        количество: qty,
+                        единица: unit
+                    };
+                });
+
+                appendMessage('gpt', `Excel загружен: ${file.name}. Строк: ${jsonData.length}`);
+                console.log('Загруженные данные:', currentSmetaItems);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function clearMessages() {
+            fetch("/clear_history", { method: "POST" })
+                .then(() => {
+                    messages.innerHTML = '';
+                    appendMessage("gpt", "История очищена. Напишите сообщение...");
+                    loadHistory();
+                })
+                .catch(err => console.error("Ошибка очистки истории:", err));
+        }
+
+        function loadHistory() {
+            fetch("/history")
+                .then(res => res.json())
+                .then(data => {
+                    const historyList = document.getElementById('history-list');
+                    historyList.innerHTML = "";
+                    if (!Array.isArray(data) || !data.length) {
+                        historyList.innerHTML = "<div>История пуста</div>";
+                        return;
+                    }
+                    data.forEach(item => {
+                        if (item.role === "user") {
+                            const div = document.createElement("div");
+                            div.className = "history-item";
+                            div.textContent = item.content.length > 100 ? item.content.substring(0, 100) + '...' : item.content;
+                            div.onclick = () => { input.value = item.content; autoResize(input); input.focus(); toggleHistory(); };
+                            historyList.appendChild(div);
+                        }
+                    });
+                })
+                .catch(err => console.error("Ошибка загрузки истории:", err));
+        }
+
+        function reloadPrices() {
+            fetch("/reload_prices", { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    alert(`Цены перезагружены! Загружено ${data.prices_loaded} позиций`);
+                    checkPricesStatus();
+                })
+                .catch(err => {
+                    console.error("Ошибка перезагрузки цен:", err);
+                    alert("Ошибка при перезагрузке цен");
+                });
+        }
+
+        function checkPricesStatus() {
+            fetch("/prices_status")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.prices_loaded > 0) {
+                        pricesStatus.innerHTML = `<span class="status-ok">✓ Цены загружены: ${data.prices_loaded} позиций</span>`;
+                    } else if (data.prices_file_exists) {
+                        pricesStatus.innerHTML = `<span class="status-error">✗ Файл цен есть, но позиций не загружено. Проверьте формат файла.</span>`;
+                    } else {
+                        pricesStatus.innerHTML = `<span class="status-error">✗ Файл prices.json не найден</span>`;
+                    }
+                })
+                .catch(err => {
+                    console.error("Ошибка проверки статуса цен:", err);
+                    pricesStatus.innerHTML = `<span class="status-error">Ошибка проверки статуса цен</span>`;
+                });
+        }
+        let __localPricesCache = null;
+        let __localPricesLoaded = false;
+
+        async function loadLocalPricesOnce() {
+            if (__localPricesLoaded) return __localPricesCache || [];
+            __localPricesLoaded = true;
+            try {
+                const res = await fetch('/get_prices');
+                if (!res.ok) throw new Error('Не удалось загрузить локальный прайс');
+                const data = await res.json();
+                __localPricesCache = Array.isArray(data) ? data : [];
+                __localPricesCache.forEach(p => p._name_norm = normStr(p.наименование || ''));
+                return __localPricesCache;
+            } catch (err) {
+                console.warn('Ошибка загрузки локального прайса:', err);
+                __localPricesCache = [];
+                return __localPricesCache;
+            }
+        }
+
+        function normStr(s) {
+            if (!s) return '';
+            return String(s).toLowerCase()
+                .replace(/[\t\r\n]/g, ' ')
+                .replace(/[.,:;()\"'«»]/g, ' ')
+                .replace(/[-/–—]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function wordsSimilarity(a, b) {
+            if (!a || !b) return 0;
+            const wa = Array.from(new Set(a.split(' ').filter(Boolean)));
+            const wb = Array.from(new Set(b.split(' ').filter(Boolean)));
+            if (!wa.length || !wb.length) return 0;
+            const inter = wa.filter(x => wb.includes(x)).length;
+            return inter * 2 / (wa.length + wb.length);
+        }
+
+        function extractNumbersFromString(s) {
+            if (!s || typeof s !== 'string') return [];
+            const matches = s.replace(/\u00A0/g, ' ').match(/-?\d+[,.]?\d*/g);
+            if (!matches) return [];
+            return matches.map(m => {
+                const n = parseFloat(m.replace(',', '.'));
+                return isNaN(n) ? null : n;
+            }).filter(x => x !== null);
+        }
+
+        function findBestLocalPriceMatch(name) {
+            if (!name) return null;
+            const n = normStr(name);
+            if (!n) return null;
+            const list = __localPricesCache || [];
+            let best = null;
+            let bestScore = 0;
+            for (const item of list) {
+                const score = wordsSimilarity(n, item._name_norm || '');
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = item;
+                }
+            }
+            if (bestScore >= 0.35) {
+                return { item: best, score: bestScore };
+            }
+            return null;
+        }
+
+        function computeEstimatesForRow({ goldText, utkurText, smetText, approxText, qty }) {
+            const gnums = extractNumbersFromString(goldText || '');
+            const unums = extractNumbersFromString(utkurText || '');
+            let gUnit = null, uUnit = null;
+
+            if (gnums.length) {
+                const gAvg = Math.round(gnums.reduce((a, b) => a + b, 0) / gnums.length);
+                const gMax = Math.round(Math.max(...gnums));
+                gUnit = { avg: gAvg, max: gMax };
+            }
+            if (unums.length) {
+                const uAvg = Math.round(unums.reduce((a, b) => a + b, 0) / unums.length);
+                const uMax = Math.round(Math.max(...unums));
+                uUnit = { avg: uAvg, max: uMax };
+            }
+
+            if (!gUnit && !uUnit) {
+                const sNums = extractNumbersFromString(smetText || '') || extractNumbersFromString(approxText || '');
+                if (sNums && sNums.length) {
+                    const sAvg = Math.round(sNums.reduce((a, b) => a + b, 0) / sNums.length);
+                    gUnit = { avg: sAvg, max: sAvg };
+                }
+            }
+
+            return { gUnit, uUnit, qty: (isNaN(+qty) ? 1 : +qty) };
+        }
+
+        function computeRowFinalValues(row, indices) {
+            const cellText = idx => (idx >= 0 && row.cells[idx]) ? row.cells[idx].textContent.trim() : '';
+            const name = cellText(indices.nameIdx);
+            const qtyRaw = cellText(indices.qtyIdx);
+            const qtyParsed = (() => {
+                const n = extractNumbersFromString(qtyRaw);
+                return (n && n.length) ? n[0] : (qtyRaw && !isNaN(+qtyRaw) ? +qtyRaw : 1);
+            })();
+
+            let goldText = cellText(indices.goldIdx);
+            let utkurText = cellText(indices.utkurIdx);
+            const smetText = cellText(indices.smetIdx);
+            const approxText = cellText(indices.approxIdx);
+
+            let { gUnit, uUnit, qty } = computeEstimatesForRow({ goldText, utkurText, smetText, approxText, qty: qtyParsed });
+
+            if ((!gUnit && !uUnit) && name && (__localPricesCache && __localPricesCache.length)) {
+                const match = findBestLocalPriceMatch(name);
+                if (match && match.item) {
+                    const p = match.item;
+                    const g = extractNumbersFromString(String(p.цена_голден || ''))[0];
+                    const u = extractNumbersFromString(String(p.цена_уткур || ''))[0];
+                    if (g != null) gUnit = { avg: Math.round(g), max: Math.round(g) };
+                    if (u != null) uUnit = { avg: Math.round(u), max: Math.round(u) };
+                }
+            }
+
+            let finalMaxUnit = null;
+            let finalAvgUnit = null;
+
+            if (gUnit && uUnit) {
+                finalMaxUnit = Math.round(Math.max(gUnit.max, uUnit.max));
+                finalAvgUnit = Math.round((gUnit.avg + uUnit.avg) / 2);
+            } else if (gUnit) {
+                finalMaxUnit = Math.round(gUnit.max);
+                finalAvgUnit = Math.round(gUnit.avg);
+            } else if (uUnit) {
+                finalMaxUnit = Math.round(uUnit.max);
+                finalAvgUnit = Math.round(uUnit.avg);
+            } else {
+                const fallbackNums = extractNumbersFromString(smetText || approxText || '');
+                if (fallbackNums.length) {
+                    const val = Math.round(fallbackNums[0]);
+                    finalMaxUnit = finalAvgUnit = val;
+                }
+            }
+
+            const qtyNum = isNaN(+qty) ? 1 : +qty;
+            const maxRub = finalMaxUnit != null ? Math.round(finalMaxUnit * qtyNum) : null;
+            const avgRub = finalAvgUnit != null ? Math.round(finalAvgUnit * qtyNum) : null;
+
+            return {
+                name,
+                qty: qtyNum,
+                unit_price_max: finalMaxUnit,
+                unit_price_avg: finalAvgUnit,
+                maxRub,
+                avgRub
+            };
+        }
+        async function postProcessTablesInDiv(containerDiv) {
+            await loadLocalPricesOnce();
+            const tables = containerDiv.querySelectorAll('table.gpt-table');
+            tables.forEach(table => {
+                if (table.dataset.processed) return;
+                table.dataset.processed = '1';
+
+                const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim().toLowerCase());
+                const findHeaderIdx = (patts) => {
+                    for (let i = 0; i < headers.length; i++) {
+                        const h = headers[i];
+                        for (const p of patts) {
+                            if (h.includes(p)) return i;
+                        }
+                    }
+                    return -1;
+                };
+                addTableControls(table);
+                const nameIdx = findHeaderIdx(['наименование', 'наим', 'работ', 'материал', 'item', 'name']);
+                const qtyIdx = findHeaderIdx(['количество', 'кол-во', 'кол']);
+                const goldIdx = findHeaderIdx(['голден', 'golden', 'цена гол', 'цена_голден', 'цена голден']);
+                const utkurIdx = findHeaderIdx(['уткур', 'utkur', 'цена_уткур', 'цена утк']);
+                const smetIdx = findHeaderIdx(['смет', 'сметная', 'сметная цена', 'смета']);
+
+                const indices = { nameIdx, qtyIdx, goldIdx, utkurIdx, smetIdx, approxIdx };
+
+                const theadRow = table.querySelector('thead tr') || table.createTHead().insertRow();
+                const existing = Array.from(theadRow.cells).map(td => td.textContent.toLowerCase());
+                if (!existing.some(h => h.includes('максималь'))) {
+                    const th = document.createElement('th');
+                    th.textContent = 'Максимальная стоимость';
+                    theadRow.appendChild(th);
+                }
+                if (!existing.some(h => h.includes('средн'))) {
+                    const th2 = document.createElement('th');
+                    th2.textContent = 'Средняя стоимость';
+                    theadRow.appendChild(th2);
+                }
+
+                // Обработка строк
+                const tbody = table.tBodies[0] || table.querySelector('tbody') || table;
+                Array.from(tbody.rows).forEach(row => {
+                    if (row.dataset.estimated) return;
+                    row.dataset.estimated = '1';
+
+                    const res = computeRowFinalValues(row, indices);
+
+                    const maxTd = document.createElement('td');
+                    maxTd.textContent = res.maxRub != null ? `${res.maxRub}р` : '-';
+                    const avgTd = document.createElement('td');
+                    avgTd.textContent = res.avgRub != null ? `${res.avgRub}р` : '-';
+
+                    row.appendChild(maxTd);
+                    row.appendChild(avgTd);
+                });
+                const controlsDiv = document.createElement('div');
+                controlsDiv.className = 'table-controls';
+
+                const copyTableBtn = document.createElement('button');
+                copyTableBtn.className = 'copy-table-btn';
+                copyTableBtn.textContent = 'Копировать таблицу2';
+                copyTableBtn.onclick = () => copyTableToClipboard(table);
+                controlsDiv.appendChild(copyTableBtn);
+
+                const finalHeaders = Array.from(table.querySelectorAll('thead th'));
+                finalHeaders.forEach((th, idx) => {
+                    const copyColumnBtn = document.createElement('button');
+                    copyColumnBtn.className = 'copy-column-btn';
+                    copyColumnBtn.textContent = `Копировать: ${th.textContent}`;
+                    copyColumnBtn.onclick = () => copyColumnToClipboard(table, idx);
+                    controlsDiv.appendChild(copyColumnBtn);
+                });
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'excel-btn';
+                downloadBtn.textContent = 'Скачать XLSX';
+                downloadBtn.onclick = () => {
+                    const filename = `smeta_${(new Date()).toISOString().slice(0, 19).replace(/[:T]/g, '-')}.xlsx`;
+                    exportTableToExcel(table, filename);
+                };
+                controlsDiv.appendChild(downloadBtn);
+
+                table.parentNode.insertBefore(controlsDiv, table);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
+                const existingTables = document.querySelectorAll('table.gpt-table');
+                existingTables.forEach(table => {
+                    if (!table.dataset.processed) {
+                        addTableControls(table);
+                    }
+                });
+            }, 100);
+        });
+        let currentTableForDownload = null;
+        function openFilenameModal(table) {
+            currentTableForDownload = table;
+            const modal = document.getElementById('filename-modal');
+            modal.style.display = 'block';
+            const filenameInput = document.getElementById('excel-filename');
+            filenameInput.focus();
+            filenameInput.select();
+            updateFilenamePreview();
+        }
+
+        function closeFilenameModal() {
+            const modal = document.getElementById('filename-modal');
+            modal.style.display = 'none';
+            currentTableForDownload = null;
+        }
+
+        function updateFilenamePreview() {
+            const filenameInput = document.getElementById('excel-filename');
+            const preview = document.getElementById('filename-preview');
+            let filename = filenameInput.value.trim();
+
+            if (!filename) {
+                filename = 'таблица';
+            }
+
+            filename = filename.replace(/\.xlsx$/i, '');
+            preview.textContent = filename + '.xlsx';
+        }
+        function confirmDownload() {
+            const filenameInput = document.getElementById('excel-filename');
+            let filename = filenameInput.value.trim();
+
+            if (!filename) {
+                filename = 'таблица';
+            }
+            filename = filename.replace(/\.xlsx$/i, '');
+            const finalFilename = filename + '.xlsx';
+
+            if (currentTableForDownload) {
+                exportTableToExcel(currentTableForDownload, finalFilename);
+                closeFilenameModal();
+            }
+        }
+        function addTableControls(table) { 
+    if (table.previousElementSibling && table.previousElementSibling.classList.contains('table-controls')) return;
+
+    const controlsDiv = document.createElement('div');
+    controlsDiv.className = 'table-controls';
+
+    if (!table.dataset.originalOrder) table.dataset.originalOrder = table.innerHTML;
+
+    // ------------------ Выпадающее меню "Копировать" ------------------
+    const copyWrapper = document.createElement('div');
+    copyWrapper.className = 'dropdown';
+    copyWrapper.style.display = 'inline-block';
+    copyWrapper.style.position = 'relative';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Копировать ▼';
+    copyBtn.className = 'copy-dropdown-btn';
+    copyBtn.style.cssText = `
+        background-color: #000000;
+        color: #ffffff;
+        border: 2px solid #000000;
+        border-radius: 5px;
+        padding: 0.6rem 1.2rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.15);
+        font-family: "New Century Schoolbook", "TeX Gyre Schola", serif;
+    `;
+
+    const copyMenu = document.createElement('div');
+    copyMenu.className = 'dropdown-menu';
+    copyMenu.style.cssText = `
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 200px;
+        background-color: #fff0f5;
+        border: 2px solid #ffb6c1;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        overflow: hidden;
+        font-family: "New Century Schoolbook", "TeX Gyre Schola", serif;
+    `;
+
+    // Копировать всю таблицу
+    const copyTableItem = document.createElement('div');
+    copyTableItem.textContent = 'Всю таблицу';
+    copyTableItem.style.cssText = `padding: 10px 14px; cursor: pointer; transition: all 0.2s; color: #000000; border-bottom: 1px solid #ffd0e8;`;
+    copyTableItem.onclick = () => copyTableToClipboard(table);
+    copyMenu.appendChild(copyTableItem);
+
+    // Копировать отдельные столбцы
+    const headers = table.querySelectorAll('thead th');
+    headers.forEach((th, idx) => {
+        const item = document.createElement('div');
+        item.textContent = `Столбец: ${th.textContent}`;
+        item.style.cssText = `padding: 10px 14px; cursor: pointer; transition: all 0.2s; color: #000000; border-bottom: 1px solid #ffd0e8;`;
+        item.onclick = () => copyColumnToClipboard(table, idx);
+        copyMenu.appendChild(item);
+    });
+
+    copyWrapper.appendChild(copyBtn);
+    copyWrapper.appendChild(copyMenu);
+    controlsDiv.appendChild(copyWrapper);
+
+    // ------------------ Кнопка "Скачать XLSX" ------------------
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'excel-btn';
+    downloadBtn.textContent = 'Скачать XLSX';
+    downloadBtn.style.cssText = `
+        background-color: #000000;
+        color: #ffffff;
+        border: 2px solid #000000;
+        border-radius: 5px;
+        padding: 0.6rem 1.2rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.15);
+        font-family: "New Century Schoolbook", "TeX Gyre Schola", serif;
+        margin-left: 10px;
+    `;
+downloadBtn.onclick = () => openFilenameModal(table);
+    controlsDiv.appendChild(downloadBtn);
+
+    // ------------------ Кнопка фильтра по единицам ------------------
+    const filterBtn = document.createElement('button');
+    filterBtn.textContent = 'Фильтр по единицам';
+    filterBtn.style.cssText = downloadBtn.style.cssText;
+    filterBtn.onclick = () => filterByUnits(table);
+    controlsDiv.appendChild(filterBtn);
+
+    // ------------------ Кнопка восстановления исходной таблицы ------------------
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Исходная таблица';
+    resetBtn.style.cssText = downloadBtn.style.cssText + 'background-color: #444444; border: 2px solid #444444;';
+    resetBtn.onclick = () => resetToOriginal(table);
+    controlsDiv.appendChild(resetBtn);
+
+    // ------------------ Hover эффекты ------------------
+    [copyBtn, downloadBtn, filterBtn, resetBtn].forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#ff85c1';
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '3px 3px 7px rgba(0,0,0,0.2)';
+        });
+        btn.addEventListener('mouseleave', function() {
+            if (this === resetBtn) this.style.backgroundColor = '#444444';
+            else this.style.backgroundColor = '#000000';
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.15)';
+        });
+    });
+
+    copyMenu.querySelectorAll('div').forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#ff85c1';
+            this.style.color = '#ffffff';
+        });
+        item.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+            this.style.color = '#000000';
+        });
+    });
+
+    // ------------------ Логика открытия/закрытия меню ------------------
+    copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        copyMenu.style.display = copyMenu.style.display === 'block' ? 'none' : 'block';
+    });
+    document.addEventListener('click', (e) => {
+        if (!copyWrapper.contains(e.target)) copyMenu.style.display = 'none';
+    });
+
+    table.parentNode.insertBefore(controlsDiv, table);
+}
+
+// ------------------ Скачивание Excel с твоим уведомлением ------------------
+function exportTableToExcel(table, filename = 'table.xlsx') {
+    try {
+        const controls = table.previousElementSibling && table.previousElementSibling.classList.contains('table-controls') ? table.previousElementSibling : null;
+        if (controls) controls.style.display = 'none';
+
+        const ws = XLSX.utils.table_to_sheet(table);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+        XLSX.writeFile(wb, filename);
+
+        if (controls) controls.style.display = '';
+        showDownloadSuccess(filename);
+    } catch (err) {
+        console.error('Ошибка экспорта в XLSX:', err);
+        alert('Ошибка при экспорте XLSX: ' + (err.message || err));
+    }
+}
+
+// ------------------ Фильтр по единицам с обработкой составных единиц ------------------
+function filterByUnits(table) {
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const tbody = table.tBodies[0];
+
+    // Сохраняем исходное состояние таблицы, если ещё не сохранено
+    if (!table.dataset.originalOrder) {
+        table.dataset.originalOrder = table.innerHTML;
+    }
+
+    // Создаём карту единиц измерения
+    const unitsMap = new Map();
+    rows.forEach(row => {
+        const unit = extractUnitFromRow(row); // Используем твою функцию
+        if (!unitsMap.has(unit)) unitsMap.set(unit, []);
+        unitsMap.get(unit).push(row);
+    });
+
+    // Очищаем tbody перед вставкой
+    tbody.innerHTML = '';
+
+    // Сортируем единицы измерения (например, без единицы вначале)
+    const sortedUnits = Array.from(unitsMap.keys()).sort((a, b) => {
+        if (a === 'без единицы') return -1;
+        if (b === 'без единицы') return 1;
+        return a.localeCompare(b);
+    });
+
+    // Вставляем все строки по отсортированным единицам, без заголовков и разделителей
+    sortedUnits.forEach(unit => {
+        unitsMap.get(unit).forEach(row => tbody.appendChild(row));
+    });
+
+    // Уведомление (можно оставить или убрать)
+    showFilterNotification(`Таблица отсортирована по единицам измерения. Найдено единиц: ${unitsMap.size}`);
+}
+
+function extractUnitFromRow(row){
+    const cells = row.querySelectorAll('td');
+    for(let cell of cells){
+        const text=cell.textContent.trim();
+
+        // Составные единицы с числом
+        const compositeUnit = text.match(/(\d+)\s*(шт|кг|л|м²|м³|м|м.п)/);
+        if(compositeUnit) return compositeUnit[1] + ' ' + compositeUnit[2];
+
+        // Единицы в скобках
+        const unitInBrackets = text.match(/\(([млкгштм²м³\d]{1,10})\)/);
+        if(unitInBrackets) return unitInBrackets[1];
+
+        // Простые единицы
+        const simpleUnit = text.match(/^(м|л|кг|шт|м²|м³|т)$/);
+        if(simpleUnit) return simpleUnit[1];
+    }
+    return 'без единицы';
+}
+
+// ------------------ Восстановление таблицы ------------------
+function resetToOriginal(table){
+    if(table.dataset.originalOrder){
+        table.innerHTML=table.dataset.originalOrder;
+        showFilterNotification('Таблица восстановлена в исходное состояние');
+    } else showFilterNotification('Исходное состояние таблицы не найдено', true);
+}
+
+        function showDownloadSuccess(filename) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4CAF50;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-family: inherit;
+    `;
+            notification.textContent = `Файл "${filename}" скачан успешно!`;
+
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 500);
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const filenameInput = document.getElementById('excel-filename');
+            if (filenameInput) {
+                filenameInput.addEventListener('input', updateFilenamePreview);
+                filenameInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        confirmDownload();
+                    }
+                });
+            }
+
+            const filenameModal = document.getElementById('filename-modal');
+            if (filenameModal) {
+                filenameModal.addEventListener('click', function (e) {
+                    if (e.target === filenameModal) {
+                        closeFilenameModal();
+                    }
+                });
+            }
+        });
+        document.querySelectorAll(".script-btn").forEach(btn => btn.onclick = () => { input.value = btn.getAttribute("data-script"); autoResize(input); input.focus(); });
+        document.getElementById("excel-file").addEventListener("change", function () { handleFile(this); });
+        input.addEventListener("keydown", event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); } });
+        window.addEventListener("DOMContentLoaded", () => {
+            input.focus();
+            checkPricesStatus();
+            loadHistory();
+        });
+    </script>
+</body>
+
+</html>
