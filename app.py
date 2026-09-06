@@ -17,8 +17,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # === Токены ===
-SMETA_API_TOKEN = "f8jnhskPMwzovgXG5dxtC7VI"
-HF_TOKEN = "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"
+SMETA_API_TOKEN = ""
+HF_TOKEN = ""
 
 app = FastAPI()
 
