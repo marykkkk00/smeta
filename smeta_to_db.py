@@ -25,10 +25,10 @@ if uploaded_file:
     records = df.to_dict(orient='records')
 
     # --- Подключение к базе ---
-    db_user = 'postgr'       # Ваш пользователь PostgreSQL
-    db_password = '000mk'    # Пароль
+    db_user = ''       # Ваш пользователь PostgreSQL
+    db_password = ''    # Пароль
     db_host = 'localhost'
-    db_port = '5432'
+    db_port = ''
     db_name = 'smeta_db'
 
     engine = create_engine(f'postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}')
