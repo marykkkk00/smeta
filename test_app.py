@@ -5,7 +5,7 @@ from io import BytesIO
 
 # === НАСТРОЙКИ API ===
 API_BASE_URL = "https://cs.smetnoedelo.ru/api/"  # пока не используем (демо-цены)
-API_TOKEN = "f8jnhskPMwzovgXG5dxtC7VI"
+API_TOKEN = ""
 
 # === Вспомогательные функции ===
 def detect_base_by_code(code):
